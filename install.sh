@@ -58,9 +58,17 @@ on_error() {
     rmdir "$ROLLBACK_LOCK" 2>/dev/null || exit "$code"
     warn "Installation fehlgeschlagen (Code $code)."
     if [ "$STARTED" -eq 1 ]; then
-        warn "Mache alles wieder rueckgaengig ..."
-        bash "$SCRIPT_DIR/uninstall.sh" "$PANEL_DIR" --yes --web-user "$WEB_USER" || \
-            warn "Automatisches Zurueckrollen nicht vollstaendig - bitte 'bash uninstall.sh' manuell ausfuehren."
+        # Nur zurueckrollen, wenn wirklich etwas da ist (Extension registriert oder Tabellen angelegt).
+        local listed status_out
+        listed="$(artisan p:extension:list 2>/dev/null || true)"
+        status_out="$(tool status 2>/dev/null || true)"
+        if grep -q 'team-roles' <<<"$listed" || ! grep -q 'Tabellen nicht vorhanden' <<<"$status_out"; then
+            warn "Mache alles wieder rueckgaengig ..."
+            bash "$SCRIPT_DIR/uninstall.sh" "$PANEL_DIR" --yes --web-user "$WEB_USER" || \
+                warn "Automatisches Zurueckrollen nicht vollstaendig - bitte 'bash uninstall.sh' manuell ausfuehren."
+        else
+            warn "Es wurde nichts installiert - es gibt nichts zurueckzurollen. Am Panel wurde nichts veraendert."
+        fi
     fi
     exit "$code"
 }

@@ -52,10 +52,26 @@ fi
 say "1/4 Stufe alle Nicht-Owner herab"
 tool demote-staff || die "Herabstufen fehlgeschlagen - Extension bleibt installiert, damit die Einschraenkungen weiter gelten."
 
-# 2. Extension deaktivieren und entfernen (Fehler hier sind unkritisch, falls schon entfernt)
+# 2. Extension deaktivieren und entfernen (nur wenn sie registriert ist)
 say "2/4 Deaktiviere und entferne Extension"
-artisan p:extension:disable team-roles || warn "disable meldete einen Fehler (evtl. schon deaktiviert/entfernt)."
-artisan p:extension:remove team-roles  || warn "remove meldete einen Fehler (evtl. schon entfernt)."
+LISTED="$(artisan p:extension:list 2>/dev/null || true)"
+if grep -q 'team-roles' <<<"$LISTED"; then
+    artisan p:extension:disable team-roles || warn "disable meldete einen Fehler (evtl. schon deaktiviert)."
+    # "p:extension:remove" fragt nach (yes/no, Standard no): je nach Panel-Version --force/--yes nutzen, sonst "yes" antworten.
+    REMOVE_HELP="$(artisan p:extension:remove --help 2>&1 || true)"
+    if grep -q -- '--force' <<<"$REMOVE_HELP"; then
+        artisan p:extension:remove team-roles --force || warn "remove meldete einen Fehler."
+    elif grep -q -- '--yes' <<<"$REMOVE_HELP"; then
+        artisan p:extension:remove team-roles --yes || warn "remove meldete einen Fehler."
+    else
+        printf 'yes\n' | artisan p:extension:remove team-roles || warn "remove meldete einen Fehler."
+    fi
+    if grep -q 'team-roles' <<<"$(artisan p:extension:list 2>/dev/null || true)"; then
+        warn "Die Extension steht noch in der Liste. Bitte von Hand: php artisan p:extension:remove team-roles"
+    fi
+else
+    say "Extension ist nicht (mehr) registriert - nichts zu entfernen."
+fi
 
 # 3. Eigene Tabellen loeschen
 if [ "$KEEP_DATA" -eq 1 ]; then
