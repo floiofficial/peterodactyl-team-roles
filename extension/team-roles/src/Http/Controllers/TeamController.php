@@ -15,13 +15,14 @@ use TeamRoles\Http\Middleware\EnforceTeamPermissions;
 use TeamRoles\Services\TeamService;
 use TeamRoles\Support\Defaults;
 use TeamRoles\Support\PermissionMap;
+use TeamRoles\Support\TicketRules;
 use TeamRoles\TeamRolesProvider;
 
 /**
- * Teamverwaltung - von floiofficial.
+ * Team management - by floiofficial.
  *
- * Alle Verwaltungs-Endpunkte sind OWNER-ONLY - zusaetzlich zur Middleware wird hier
- * nochmal selbst geprueft (doppelt haelt besser).
+ * All management endpoints are OWNER-ONLY - in addition to the middleware they are
+ * checked again here (better safe than sorry).
  */
 final class TeamController extends Controller
 {
@@ -29,7 +30,7 @@ final class TeamController extends Controller
     {
     }
 
-    /** GET /api/client/extensions/team-roles/me (jeder angemeldete Nutzer) */
+    /** GET /api/client/extensions/team-roles/me (any signed-in user) */
     public function me(Request $request): JsonResponse
     {
         $role = $this->team->roleFor($request->user());
@@ -39,6 +40,7 @@ final class TeamController extends Controller
             'name' => $role['name'],
             'staff' => $role['staff'],
             'permissions' => $role['slug'] === Defaults::OWNER ? ['*'] : $role['permissions'],
+            'tickets' => TicketRules::abilities($role),
         ]);
     }
 
@@ -99,7 +101,7 @@ final class TeamController extends Controller
         $this->team->bootstrap();
 
         $member = $this->team->member($userId);
-        abort_if($member === null, 404, 'Benutzer nicht gefunden.');
+        abort_if($member === null, 404, 'User not found.');
 
         return new JsonResponse($member + ['roles' => $this->team->rolesList()]);
     }
@@ -121,6 +123,6 @@ final class TeamController extends Controller
     private function ownerOnly(Request $request): void
     {
         $role = $this->team->roleFor($request->user());
-        abort_unless($role['slug'] === Defaults::OWNER, 403, 'Nur der Owner darf die Teamverwaltung nutzen.');
+        abort_unless($role['slug'] === Defaults::OWNER, 403, 'Only the Owner may use team management.');
     }
 }

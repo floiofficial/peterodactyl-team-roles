@@ -1,28 +1,28 @@
-# Teamverwaltung (team-roles) - von floiofficial
+# Team management (team-roles) - by floiofficial
 #
-# - Bei jedem Push / Pull Request: Pruefungen (PHP-Syntax, Rechte-Test, Oberflaeche, Shell-Syntax)
-# - Bei einem Tag "vX.Y.Z": zusaetzlich ein Release mit fertigem Zip + SHA-256-Pruefsumme
+# - On every push / pull request: checks (PHP syntax, permission + ticket tests, UI test, shell syntax)
+# - On a tag "vX.Y.Z": additionally a release with a ready-made zip + SHA-256 checksum
 #
-# Neue Version veroeffentlichen:
-#   1. "version" in extension/team-roles/extension.json erhoehen (z. B. 1.1.0), committen, pushen
+# Publish a new version:
+#   1. raise "version" in extension/team-roles/extension.json (e.g. 1.1.0), commit, push
 #   2. git tag v1.1.0 && git push origin v1.1.0
-#      ODER ohne Terminal: GitHub -> Actions -> "Pruefen und Release" -> "Run workflow" (Branch main)
-#      (legt den Tag v<Version aus extension.json> selbst an)
-name: Pruefen und Release
+#      OR without a terminal: GitHub -> Actions -> "Check and release" -> "Run workflow" (branch main)
+#      (creates the tag v<version from extension.json> itself)
+name: Check and release
 
 on:
   push:
     branches: [main]
     tags: ["v*"]
   pull_request:
-  workflow_dispatch: # Knopf "Run workflow" auf GitHub: legt Tag + Release aus der Version im Manifest an
+  workflow_dispatch: # "Run workflow" button on GitHub: creates tag + release from the version in the manifest
 
 permissions:
   contents: read
 
 jobs:
   check:
-    name: Pruefungen
+    name: Checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,52 +30,60 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: "8.3"
+          extensions: mbstring, pdo_sqlite
 
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
 
-      - name: PHP-Syntax
+      - name: PHP syntax
         run: |
           set -e
           find extension tools tests -name '*.php' -print0 | xargs -0 -n1 php -l
 
-      - name: Rechte-Logik testen
+      - name: Test permission logic
         run: php tests/policy_test.php
 
-      - name: Shell-Skripte pruefen
+      - name: Test ticket rules
+        run: php tests/ticket_rules_test.php
+
+      - name: Test ticket database logic (SQLite)
+        run: php tests/ticket_service_test.php
+
+      - name: Check shell scripts
         run: |
           set -e
           for f in install.sh uninstall.sh update.sh setup.sh; do bash -n "$f"; done
 
-      - name: Oberflaeche pruefen (Syntax + Manifest)
+      - name: Check UI (syntax, manifest, UI test)
         run: |
           set -e
           cp extension/team-roles/dist/client.js /tmp/client.mjs
           node --check /tmp/client.mjs
-          node -e "const m=require('./extension/team-roles/extension.json'); if(m.id!=='team-roles') throw new Error('id'); console.log('Manifest ok, Version', m.version)"
+          node -e "const m=require('./extension/team-roles/extension.json'); if(m.id!=='team-roles') throw new Error('id'); console.log('Manifest ok, version', m.version)"
+          node tests/ui/run.mjs
 
   release:
-    name: Release bauen
+    name: Build release
     needs: check
     if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
-      contents: write # noetig, um das Release anzulegen
+      contents: write # needed to create the release
     steps:
       - uses: actions/checkout@v4
 
-      - name: Tag muss zur Version im Manifest passen
+      - name: Tag must match the version in the manifest
         run: |
           set -e
           VERSION="$(node -p "require('./extension/team-roles/extension.json').version")"
           if [ "${GITHUB_EVENT_NAME}" != "workflow_dispatch" ] && [ "${GITHUB_REF_NAME}" != "v${VERSION}" ]; then
-            echo "Tag ${GITHUB_REF_NAME} passt nicht zu extension.json (Version ${VERSION})." >&2
+            echo "Tag ${GITHUB_REF_NAME} does not match extension.json (version ${VERSION})." >&2
             exit 1
           fi
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
 
-      - name: Zip und Pruefsumme erzeugen
+      - name: Create zip and checksum
         run: |
           set -e
           NAME="floiofficial-teamverwaltung-${VERSION}.zip"
@@ -83,12 +91,12 @@ jobs:
           sha256sum "${NAME}" > "${NAME}.sha256"
           cat "${NAME}.sha256"
 
-      - name: Release veroeffentlichen
+      - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -e
-          # Gibt es dieses Release schon (gleiche Version, neuer Inhalt), wird es samt Tag ersetzt.
+          # If this release already exists (same version, new content) it is replaced together with its tag.
           if gh release view "v${VERSION}" >/dev/null 2>&1; then
             gh release delete "v${VERSION}" --yes --cleanup-tag
           fi
@@ -96,12 +104,12 @@ jobs:
             --target "${GITHUB_SHA}" \
             "floiofficial-teamverwaltung-${VERSION}.zip" \
             "floiofficial-teamverwaltung-${VERSION}.zip.sha256" \
-            --title "Teamverwaltung ${VERSION}" \
-            --notes "Installieren per SSH (als root) - kopieren und einfuegen:
+            --title "Team management ${VERSION}" \
+            --notes "Install over SSH (as root) - copy and paste:
 
           \`\`\`
           bash <(curl -fsSL https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/setup.sh)
           \`\`\`
 
-          Menue: 1 Installieren, 2 Deinstallieren, 3 Aktualisieren. von floiofficial" \
+          Menu: 1 Install, 2 Uninstall, 3 Update. By floiofficial" \
             --generate-notes

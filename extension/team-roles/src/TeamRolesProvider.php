@@ -8,16 +8,17 @@ use Illuminate\Routing\Router;
 use Pterodactyl\Extensions\ExtensionProvider;
 use TeamRoles\Http\Middleware\EnforceTeamPermissions;
 use TeamRoles\Services\TeamService;
+use TeamRoles\Services\TicketService;
 
 /**
- * Teamverwaltung - von floiofficial.
+ * Team management - by floiofficial.
  *
- * Aendert KEINEN Core-Code: Die Rechtepruefung wird zur Laufzeit an die Middleware-Gruppen
- * des Panels gehaengt und verschwindet mit "p:extension:disable team-roles" wieder.
+ * Does NOT change core code: the permission check is attached to the panel's middleware groups
+ * at runtime and disappears again with "p:extension:disable team-roles".
  */
 class TeamRolesProvider extends ExtensionProvider
 {
-    /** Gruppen aus bootstrap/app.php des Panels. */
+    /** Groups from the panel's bootstrap/app.php. */
     public const GROUPS = ['admin-api', 'application-api', 'client-api'];
 
     public function register(): void
@@ -25,12 +26,13 @@ class TeamRolesProvider extends ExtensionProvider
         parent::register();
 
         $this->app->singleton(TeamService::class, static fn () => TeamService::make());
+        $this->app->singleton(TicketService::class, static fn () => TicketService::make());
     }
 
     public function boot(): void
     {
-        // Die Absicherung ZUERST und so einfach wie moeglich: Faellt spaeter etwas aus,
-        // soll sie trotzdem schon haengen.
+        // Protection FIRST and as simple as possible: if something fails later,
+        // it should already be attached.
         $this->protect();
         $this->app->booted(fn () => $this->protect());
 

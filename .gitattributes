@@ -1,10 +1,11 @@
-# Teamverwaltung - von floiofficial
-# Shell-Skripte MUESSEN LF-Zeilenenden haben, sonst laufen sie auf dem Linux-Server nicht
-# (passiert gern, wenn man unter Windows editiert).
+# Team management - by floiofficial
+# Shell scripts MUST have LF line endings, otherwise they do not run on the Linux server
+# (happens easily when editing on Windows).
 * text=auto
 *.sh text eol=lf
 *.php text eol=lf
 *.js text eol=lf
+*.mjs text eol=lf
 *.json text eol=lf
 *.md text eol=lf
 *.yml text eol=lf

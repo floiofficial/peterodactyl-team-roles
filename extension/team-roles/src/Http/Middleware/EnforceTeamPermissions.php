@@ -13,14 +13,14 @@ use TeamRoles\Support\Policy;
 use Throwable;
 
 /**
- * Teamverwaltung - von floiofficial.
+ * Team management - by floiofficial.
  *
- * Wird hinter die Middleware-Gruppen admin-api, application-api und client-api gehaengt
- * (laeuft also NACH der Anmeldung und NACH der Core-Pruefung "ist Admin").
+ * Attached behind the middleware groups admin-api, application-api and client-api
+ * (so it runs AFTER sign-in and AFTER the core check "is admin").
  *
  * - Normale Kunden (root_admin = 0): sofort durchgelassen, null zusaetzliche Datenbankabfragen.
  * - Owner: alles erlaubt.
- * - Alle anderen Staff-Rollen: nur das, was in der Rolle freigeschaltet ist.
+ * - All other staff roles: only what the role allows.
  */
 final class EnforceTeamPermissions
 {
@@ -28,10 +28,10 @@ final class EnforceTeamPermissions
     {
         $user = $request->user();
         if ($user === null) {
-            abort(403, 'Anmeldung erforderlich.');
+            abort(403, 'Authentication required.');
         }
 
-        // Kein Admin => betrifft diese Extension nicht (der Core entscheidet).
+        // Not an admin => this extension does not apply (the core decides).
         if (! (bool) ($user->root_admin ?? false)) {
             return $next($request);
         }
@@ -46,7 +46,7 @@ final class EnforceTeamPermissions
             $role = $team->roleFor($user);
         } catch (Throwable $e) {
             report($e);
-            abort(503, 'Teamverwaltung nicht erreichbar - Zugriff aus Sicherheitsgründen gesperrt.');
+            abort(503, 'Team management is unavailable - access blocked for security reasons.');
         }
 
         $area = $parsed['area'];
@@ -62,7 +62,7 @@ final class EnforceTeamPermissions
             if ($decision['permission'] !== null) {
                 $own = $decision['serverScope'] && $this->ownsOrSharesServer($request, $user);
                 if (! $own && ! in_array($decision['permission'], $role['permissions'], true)) {
-                    abort(403, 'Dir fehlt das Recht "' . $decision['permission'] . '".');
+                    abort(403, 'You are missing the permission "' . $decision['permission'] . '".');
                 }
             }
 
@@ -84,7 +84,7 @@ final class EnforceTeamPermissions
         return $this->finish($request, $next, $team, $area, $method, $rest);
     }
 
-    /** Nach erfolgreichen Benutzer-Aenderungen die Rollen wieder mit root_admin abgleichen. */
+    /** After successful user changes, reconcile the roles with root_admin again. */
     private function finish(Request $request, Closure $next, TeamService $team, string $area, string $method, string $rest): mixed
     {
         $response = $next($request);
@@ -104,13 +104,13 @@ final class EnforceTeamPermissions
     {
         $targetId = $this->resolveTargetId($request, $rest);
         if ($targetId === null) {
-            abort(403, 'Der Zielbenutzer konnte nicht eindeutig bestimmt werden.');
+            abort(403, 'The target user could not be determined unambiguously.');
         }
         if ($targetId === $actorId) {
             return;
         }
         if ($team->rankOfUserId($targetId) >= $role['rank']) {
-            abort(403, 'Du darfst Benutzer mit gleichem oder höherem Rang nicht ändern.');
+            abort(403, 'You may not change users with the same or a higher rank.');
         }
     }
 
@@ -132,7 +132,7 @@ final class EnforceTeamPermissions
         return Policy::targetUserId($rest);
     }
 
-    /** Nicht-Owner duerfen den Admin-Status nie setzen - das Feld wird verworfen. */
+    /** Non-owners may never set the admin flag - the field is discarded. */
     private function stripAdminFlag(Request $request): void
     {
         $bag = $request->isJson() ? $request->json() : $request->request;

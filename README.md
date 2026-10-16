@@ -1,300 +1,307 @@
-# Teamverwaltung für Pterodactyl 2.0
+# Team management for Pterodactyl 2.0
 
-**von floiofficial**
+**by floiofficial** · [Deutsch](README.de.md)
 
-Rollen **Owner · Administrator · Moderator · Freund · Benutzer/Kunde** mit einstellbaren Rechten.
-Der Owner hat immer alles. Bei Administrator und Moderator (und optional Freund) wählst du per
-Häkchen-Matrix, was die Person darf.
+Roles **Owner · Administrator · Moderator · Friend · User / Customer** with configurable rights, plus a
+built-in **support ticket system** with panel notifications.
 
-Es wird **kein Panel-Code verändert**. Das Ganze ist eine normale Pterodactyl-2.0-**Extension**
-(`team-roles`) und lässt sich jederzeit wieder entfernen.
+* The Owner always has everything. For Administrator, Moderator and Friend you tick what they may do.
+* Every signed-in user can open a **support ticket** (describe the problem, pick a priority).
+* You decide per role who may **see all tickets**, **reply**, **change status/priority**, **delete** and who
+  gets a **notification** in the panel.
+* **No panel code is modified.** It is a normal Pterodactyl 2.0 **extension** (`team-roles`) and can be
+  removed at any time.
+* Everything is **English by default**. The panel language (English / German) is followed automatically,
+  and every user can switch the language on the pages themselves.
 
-## 🚀 Installieren – ein Befehl (SSH, als root)
+## 🚀 Install – one command (SSH, as root)
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/floiofficial/peterodactyl-team-roles/main/setup.sh)
 ```
 
-Danach erscheint ein Menü: **1) Installieren · 2) Deinstallieren · 3) Aktualisieren · 0) Beenden**.
-Mehr dazu weiter unten bei „Ein-Befehl-Installer“. Vorher bitte die Hinweise unter „Zuerst lesen“ beachten
-(Test-Panel, Datenbank-Backup). Der Installer fragt dich, **welche E-Mail Owner wird**.
+A menu appears: **1) Install · 2) Uninstall · 3) Update · 0) Exit**. The installer asks for the path to the
+panel and **which e-mail address becomes Owner**. Please read "Read this first" below before you run it
+(test panel, database backup).
 
 ---
 
-## ⚠️ Zuerst lesen
+## ⚠️ Read this first
 
-1. **Pterodactyl 2.0 ist noch Beta** (aktuell `v2.0.0-beta.2`). Das Paket wurde nach der offiziellen
-   Extension-Doku und dem Panel-Code (`bootstrap/app.php`) gebaut, aber **nicht gegen ein echtes 2.0-Panel
-   ausprobiert**. Installiere es **zuerst auf einem Test-Panel** (oder einer Kopie), nicht direkt auf dem
-   Live-System. Siehe „Was geprüft wurde“ unten.
-2. **Mach vorher ein Datenbank-Backup.** Die Extension legt nur zwei eigene Tabellen an, ändert aber
-   `users.root_admin` (siehe „Wie es funktioniert“).
+1. **Pterodactyl 2.0 is still in development/beta.** The package was built from the official extension docs
+   and the panel code, but it was **not tried against a real 2.0 panel by me**. Install it on a **test panel
+   (or a copy) first**, not directly on production. See "What was tested" below.
+2. **Take a database backup first.** The extension creates 5 tables of its own (roles, members, tickets,
+   ticket messages, read markers) and changes `users.root_admin` (see "How it works").
 
 ---
 
-## Installieren
+## Where to find things in the panel
+
+| What | Where |
+|---|---|
+| Roles & rights, members | **Admin → Users → "Team management" tab** (tab bar above the user list) – Owner only |
+| Role of one person | **Admin → Users → [user] → "Role" tab** – Owner only |
+| Support tickets (create, read, reply) | **Account menu → Support** (`/account/support`) – everyone; also reachable from the tab bar on the Users page |
+| Notifications | Blue **"Support (n)"** pill in the navigation + a banner on the dashboard / admin overview |
+
+## Support tickets
+
+**Everyone** (also a plain User / Customer) can:
+
+* create a ticket: **subject**, **"What is the problem?"** field and a **priority** (Low · Normal · High · Urgent),
+* see **their own** tickets, write follow-up messages, close and re-open them,
+* get a notification when the team replies.
+
+**Staff** (Owner, Administrator, Moderator, Friend – whatever you configure) can additionally, per role:
+
+| Right | Meaning |
+|---|---|
+| See all tickets | Opens the **"All tickets"** tab (filters by status/priority/search, sorted by priority or activity) |
+| Reply to tickets | Write answers; the ticket becomes "In progress" on the first team answer |
+| Change status & priority | Open · In progress · Resolved · Closed, and the priority |
+| Delete tickets | Permanently delete a ticket with all its messages |
+| Get notified | Notification for new tickets and replies of other people (**only together with "See all tickets"**) |
+
+Set these under **Admin → Users → Team management → Roles & rights → "Support tickets"** (checkboxes at the
+bottom of each role). Defaults: Administrator all five; Moderator and Friend: see, reply, notified; User / Customer:
+none (their own tickets always work).
+
+Rules worth knowing:
+
+* Own tickets are **always** visible to their author. Tickets someone may not see answer with "not found".
+* **Ticket rights never give admin access.** A role that only has ticket rights (e.g. Friend) does **not**
+  get into the admin area.
+* The Owner always may everything.
+* Spam protection: max. 10 open tickets per user, rate limits on creating tickets/messages.
+* The notification counter refreshes every 60 seconds while the browser tab is visible.
+
+## Install (manual)
 
 ```bash
-# auf dem Server, im entpackten Ordner
+# on the server, in the unpacked folder
 sudo bash install.sh /var/www/pterodactyl
 ```
 
-Der Installer prüft alles, zeigt die aktuellen Admins, fragt nach Bestätigung, sichert die Admin-Konten
-nach `backups/` und installiert + aktiviert die Extension. **Schlägt etwas fehl, rollt er automatisch
-zurück.**
+The installer checks everything, shows the current admins, asks for confirmation, backs up the admin
+accounts to `backups/` and installs + enables the extension. **If anything fails it rolls back automatically.**
 
-**Owner auswählen:** Der Installer fragt: *„Wer soll Owner werden?“* — gib die **E-Mail-Adresse** ein, die das
-Konto im Panel hat (mehrere mit Komma). Stimmt die Adresse nicht, fragt er erneut. Danach wählst du, was die
-**übrigen bisherigen Admins** werden: Administrator (Standard), Moderator, Benutzer (kein Admin-Zugang mehr)
-oder Owner. **Leere Eingabe** = alle bisherigen Admins bleiben Owner (altes Verhalten, nichts ändert sich).
-Später änderst du Rollen jederzeit in der Teamverwaltung.
+**Choosing the Owner:** the installer asks *"Who should become Owner?"* – enter the **e-mail address** the
+account has in the panel (several: comma-separated). If the address is unknown it asks again. Then you choose
+what the **remaining current admins** become: Administrator (default), Moderator, User (no admin access any
+more) or Owner. **Empty input** = all current admins stay Owner (previous behaviour, nothing changes).
+You can change roles at any time later under Team management.
 
-Ohne Rückfragen: `sudo bash install.sh /var/www/pterodactyl --owner ich@example.com --others administrator --yes`
+Without questions: `sudo bash install.sh /var/www/pterodactyl --owner me@example.com --others administrator --yes`
 
-Optionen: `--yes` (ohne Rückfrage), `--owner EMAIL[,EMAIL2]`, `--others administrator|moderator|friend|user|owner`,
-`--web-user www-data`. Docker: Befehle im Container ausführen und
-`/app` als Panel-Pfad angeben (`/app/extensions` muss ein Volume sein).
+Options: `--yes`, `--owner EMAIL[,EMAIL2]`, `--others administrator|moderator|friend|user|owner`,
+`--web-user www-data`. Docker: run the commands inside the container and pass `/app` as the panel path
+(`/app/extensions` must be a volume).
 
-Danach im Panel die Seite neu laden.
+Then reload the page in the panel. Panels reporting version `2.0.0-dev` work too (the manifest accepts
+`>=2.0.0-dev <3.0`).
 
-## Benutzen
+### Default rights
 
-* **Admin → Teamverwaltung**
-  * **Rollen & Rechte:** Rolle wählen → Häkchen setzen → *Rechte speichern*. Pro Bereich (Benutzer, Server,
-    Nodes, …) gibt es *Ansehen / Erstellen·Aktionen / Bearbeiten / Löschen*.
-  * **Mitglieder:** Suche, Filter, Rolle pro Person per Auswahlfeld ändern.
-* **Admin → Users → [Benutzer] → Reiter „Rolle“:** Rolle für genau diese Person einstellen
-  (User/Kunde, Freund, Moderator, Administrator, Owner). Im Kopf der Benutzerseite steht ein Rollen-Chip.
-
-### Standard-Rechte
-
-| Rolle | Admin-Zugang | Standard |
+| Role | Admin access | Default |
 |---|---|---|
-| Owner | alles | nicht einstellbar, immer alle Rechte |
-| Administrator | ja | fast alles; Einstellungen nur ansehen, keine API-Schlüssel |
-| Moderator | ja | nur **Ansehen** (Benutzer, Server, Nodes, Locations, Eggs, Mounts, DB-Hosts, Tags, Aktivität) + Server-Zugriff ansehen |
-| Freund | nein | keine Rechte (kannst du ändern) |
-| Benutzer / Kunde | nein | keine Rechte |
+| Owner | everything | not editable, always all rights |
+| Administrator | yes | almost everything; settings view-only, no API keys; all ticket rights |
+| Moderator | yes | **view only** (users, servers, nodes, locations, eggs, mounts, DB hosts, tags, activity) + view server access; tickets: see, reply, notified |
+| Friend | no | no admin rights; tickets: see, reply, notified (editable) |
+| User / Customer | no | no rights (can still create and read their own tickets) |
 
-Sobald eine Rolle **mindestens ein Recht** hat, bekommt sie Zugang zum Admin-Bereich — aber nur im Rahmen
-der Häkchen.
+As soon as a role has **at least one right outside "Support tickets"** it gets access to the admin area –
+but only within the ticked rights.
 
-### Was nur der Owner darf (nicht vergebbar)
+### What only the Owner may do (cannot be granted)
 
-* **Extensions** installieren/verwalten (das wäre Code-Ausführung auf deinem Server)
-* **Teamverwaltung** selbst, Rollen vergeben, Rechte ändern
-* Es muss immer **mindestens ein Owner** bleiben
+* Install/manage **extensions** (that would be code execution on your server)
+* **Team management** itself, assigning roles, changing rights
+* There must always be **at least one Owner**
 
-### Schutz gegen Rechte-Erschleichung
+### Protection against privilege escalation
 
-* Admin-Status (`root_admin`) kann ein Nicht-Owner weder setzen noch ändern.
-* Benutzer mit **gleichem oder höherem Rang** kann man nicht bearbeiten/löschen (ein Moderator kann
-  keinen Administrator oder Owner anfassen).
-* Die Client-API (Konsole, Dateien, Backups fremder Server) ist für Moderatoren/Administratoren auf das
-  Recht **„Zugriff auf fremde Server“** begrenzt — sonst dürfte jeder Admin im Core auf jeden Server.
-  Eigene und geteilte Server (Subuser) bleiben immer erreichbar.
-
----
-
-## Wie es funktioniert (und was du wissen musst)
-
-Pterodactyl kennt im Core nur „Admin ja/nein“ (`users.root_admin`). Damit ein Moderator überhaupt in den
-Admin-Bereich kommt, setzt die Extension für **alle Rollen mit Rechten** `root_admin = 1` — und
-**schränkt sie dann per Middleware wieder ein** (`admin-api`, `application-api`, `client-api`). Die Rolle
-ist die Quelle der Wahrheit; `root_admin` wird daraus abgeleitet.
-
-Folgen:
-
-* **Der Admin-Haken im normalen Benutzerformular wird von der Rolle überschrieben.** Rollen vergibst du
-  nur in der Teamverwaltung bzw. im Reiter „Rolle“.
-* **Wird die Extension deaktiviert, ohne herabzustufen, wären Moderatoren plötzlich Voll-Admins.**
-  Deshalb stuft `uninstall.sh` **zuerst herab und entfernt erst dann** (und bricht ab, falls das scheitert).
-* **`PTERODACTYL_EXTENSIONS_ENABLED=false` in der `.env` schaltet auch die Einschränkung ab!**
-  Vorher `php tools/team-tool.php /var/www/pterodactyl demote-staff` ausführen.
-* Wirft die Extension beim Laden einen Fehler, überspringt das Panel sie. Die Absicherung wird deshalb
-  als allererstes im `boot()` eingehängt, und die Teamverwaltung zeigt oben **„Rechteprüfung ist aktiv“**
-  bzw. eine rote Warnung, falls sie nicht in allen drei API-Gruppen hängt. Schau da nach Updates des Panels kurz rein.
-* Unklare Fälle werden **gesperrt** (z. B. unbekannte Admin-Bereiche, nicht eindeutig erkennbarer
-  Zielbenutzer, Datenbankfehler). Seiten ohne Recht zeigen im Panel einen 403-Fehler — das Menü selbst
-  lässt sich von Extensions nicht ausblenden.
+* A non-Owner can neither set nor change the admin flag (`root_admin`).
+* Users of **equal or higher rank** cannot be edited/deleted (a Moderator cannot touch an Administrator or Owner).
+* The client API (console, files, backups of other people's servers) is limited for Moderators/Administrators to the
+  right **"Access to other users' servers"** – otherwise every admin could enter every server in the core.
+  Own and shared (subuser) servers always stay reachable.
 
 ---
 
-## Ein-Befehl-Installer (per SSH)
+## How it works (and what you need to know)
 
-Sobald das Repo auf GitHub liegt und ein Release existiert, reicht auf dem Server **ein Befehl** (als root):
+Pterodactyl's core only knows "admin yes/no" (`users.root_admin`). For a Moderator to reach the admin area at
+all, the extension sets `root_admin = 1` for **all roles with admin rights** – and **then restricts them again
+via middleware** (`admin-api`, `application-api`, `client-api`). The role is the source of truth; `root_admin`
+is derived from it. Ticket pages use the normal client API (any signed-in user) and are checked per request.
+
+Consequences:
+
+* **The admin checkbox in the normal user form is overridden by the role.** Assign roles only in Team
+  management or in the "Role" tab.
+* **If the extension is disabled without demoting first, Moderators would suddenly be full admins.**
+  That is why `uninstall.sh` **demotes first and removes afterwards** (and aborts if that fails).
+* **`PTERODACTYL_EXTENSIONS_ENABLED=false` in `.env` also switches the restriction off!** Run
+  `php tools/team-tool.php /var/www/pterodactyl demote-staff` first.
+* If the extension throws while loading, the panel skips it. The protection is therefore attached first thing in
+  `boot()`, and the Team management page shows **"Permission check is active"** or a red warning if it is not attached
+  to all API groups. Take a quick look after panel updates.
+* Unclear cases are **blocked** (unknown admin areas, target user not clearly identifiable, database errors).
+  Pages without a right show a 403 error – extensions cannot hide the menu itself.
+
+---
+
+## One-command installer (over SSH)
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/floiofficial/peterodactyl-team-roles/main/setup.sh)
 ```
 
-Es erscheint ein Menü:
-
 ```
-  1) Installieren
-  2) Deinstallieren
-  3) Aktualisieren
-  0) Beenden
+  1) Install
+  2) Uninstall
+  3) Update
+  0) Exit
 ```
 
-Direktaufruf ohne Menü: `... setup.sh) install`, `... setup.sh) uninstall`, `... setup.sh) update`.
+Direct call without the menu: `... setup.sh) install`, `... setup.sh) uninstall`, `... setup.sh) update`.
 
-`setup.sh` fragt den Panel-Pfad ab, lädt das neueste Release, prüft die SHA-256-Prüfsumme und legt die
-Dateien unter `/opt/floiofficial-teamverwaltung` ab. Danach laufen `install.sh` / `uninstall.sh` /
-`update.sh` von dort. **Deinstallieren funktioniert auch ohne Internet**, sobald die Dateien einmal dort liegen.
+`setup.sh` asks for the panel path, downloads the latest release, verifies the SHA-256 checksum and stores the
+files in `/opt/floiofficial-teamverwaltung`. `install.sh` / `uninstall.sh` / `update.sh` then run from there.
+**Uninstalling also works without internet** once the files are there.
 
-Voraussetzungen: `curl`, `unzip`, `php` (ist auf dem Panel-Server vorhanden). Für den Befehl oben muss das
-Repo **öffentlich** sein (der Code enthält keine Geheimnisse; `backups/` ist ausgeschlossen). Bei einem
-privaten Repo: Release-Zip manuell auf den Server legen oder `GITHUB_TOKEN` setzen und `setup.sh` per
-`git clone` bzw. Download mit Token holen.
+Requirements: `curl`, `unzip`, `php` (present on the panel server). The command above needs a **public** repo
+(the code contains no secrets; `backups/` is excluded). For a private repo set `GITHUB_TOKEN`.
 
-> Wer `curl | bash` nutzt, führt Code aus dem Netz aus. Sieh dir `setup.sh` vorher an — es ist kurz.
+> Anyone using `curl | bash` runs code from the internet. Read `setup.sh` first – it is short.
 
 ---
 
-## Mit GitHub verbinden (Releases + Update per Skript)
+## GitHub (releases + update by script)
 
-Ablauf: Du pflegst den Code in einem GitHub-Repo. Bei einem Versions-Tag baut eine **GitHub Action**
-automatisch ein Release (Zip + SHA-256-Prüfsumme). Auf dem Server holt `update.sh` das neueste Release.
+You maintain the code in a GitHub repo. A **GitHub Action** builds a release (zip + SHA-256 checksum).
+On the server `update.sh` fetches the newest release.
 
-**1. Repo anlegen und hochladen** (einmalig, auf deinem Rechner im entpackten Ordner):
+**Publish a new version:**
 
-```bash
-git init -b main        # im Zip ist kein .git-Ordner enthalten, daher einmalig anlegen
-git add . && git commit -m "Teamverwaltung 1.0.0"
-git remote add origin https://github.com/floiofficial/peterodactyl-team-roles.git
-git push -u origin main
-```
+1. Raise `"version"` in `extension/team-roles/extension.json` (e.g. `1.2.0`), commit, push.
+2. `git tag v1.2.0 && git push origin v1.2.0` – **or without a terminal:** GitHub → *Actions* → **"Check and release"** →
+   *Run workflow* (branch `main`). The action then creates the tag `v<version>` itself.
+3. The action checks the code and creates the release. The tag **must** match the manifest version.
 
-Die `.gitignore` hält `backups/` heraus — dort stehen **Benutzernamen und E-Mail-Adressen deiner Admins**.
-Prüfe vor dem ersten Push mit `git status`, dass nichts aus `backups/` dabei ist. Besonders wichtig bei
-einem **öffentlichen** Repo. Ein **privates** Repo ist für dieses Projekt die bessere Wahl.
-
-**2. Neue Version veröffentlichen:**
-
-1. `"version"` in `extension/team-roles/extension.json` erhöhen (z. B. `1.1.0`), committen, pushen
-2. `git tag v1.1.0 && git push origin v1.1.0` — **oder ohne Terminal:** GitHub → *Actions* → „Pruefen und Release“ →
-   *Run workflow* (Branch `main`). Die Action legt den Tag `v<Version>` dann selbst an.
-3. Die Action „Pruefen und Release“ prüft den Code und legt das Release an. Der Tag **muss** zur Version
-   im Manifest passen (sonst bricht sie ab).
-
-**3. Auf dem Server aktualisieren:**
+**Update on the server:**
 
 ```bash
-# erstes Mal (merkt sich das Repo in .update-repo)
+# first time (remembers the repo in .update-repo)
 sudo bash update.sh /var/www/pterodactyl --repo floiofficial/peterodactyl-team-roles
-# danach reicht
+# afterwards this is enough
 sudo bash update.sh /var/www/pterodactyl
-# privates Repo: vorher einen Token mit Lesezugriff auf „Contents“ setzen
-export GITHUB_TOKEN=...
-# zurück zur vorherigen Version
+# back to the previous version
 sudo bash update.sh /var/www/pterodactyl --rollback
 ```
 
-Optionen: `--version v1.1.0` (bestimmte Version), `--yes`, `--force` (gleiche/ältere Version erlauben),
-`--ext-dir`, `--web-user`.
+Options: `--version v1.2.0`, `--yes`, `--force`, `--ext-dir`, `--web-user`. Private repo: `export GITHUB_TOKEN=...`
+(read access to "Contents").
 
-Was das Skript sicherstellt:
+What the script guarantees:
 
-* Installiert wird nur, wenn die **SHA-256-Prüfsumme** stimmt, das Zip keine unsicheren Pfade enthält und
-  die Version im Paket zum Release-Tag passt.
-* Vorher wird die installierte Version nach `backups/` gesichert (für `--rollback`).
-* Aktualisiert wird per `p:extension:install` über die vorhandene Version. **Es wird nie `p:extension:remove`
-  benutzt** — sonst fiele die Rechteprüfung weg und Moderatoren wären kurzzeitig Voll-Admins. Schlägt die
-  Installation fehl, stellt das Panel die alte Version selbst wieder her.
-* Datenbank-Migrationen einer neuen Version laufen automatisch; ein Rollback dreht sie **nicht** zurück —
-  mach vor einem Update ein Datenbank-Backup.
-
-**Ehrlich dazu:** Die GitHub Action wurde **noch nie auf GitHub ausgeführt**, und `update.sh` wurde nur gegen
-eine **simulierte** GitHub-API und ein Fake-Panel getestet (Update, aktuell, falsche Prüfsumme, Downgrade,
-Installationsfehler, Rollback, Token). Probiere beides zuerst auf dem Test-Panel.
+* It only installs when the **SHA-256 checksum** matches, the zip has no unsafe paths and the package version
+  matches the release tag.
+* The installed version is backed up to `backups/` first (for `--rollback`).
+* Updating uses `p:extension:install` over the existing version. **`p:extension:remove` is never used** – otherwise
+  the permission check would disappear and Moderators would briefly be full admins.
+* Database migrations of a new version run automatically (version 1.1.0 adds the ticket tables). If the panel does not run
+  the new migration during an update, the extension creates the ticket tables itself on first use. A rollback does
+  **not** revert them – take a database backup before updating.
 
 ---
 
-## Wieder entfernen
+## Remove
 
 ```bash
 sudo bash uninstall.sh /var/www/pterodactyl
 ```
 
-Reihenfolge (Absicht!):
+Order (intentional!):
 
-1. Alle Nicht-Owner verlieren den Admin-Status (Owner bleiben Admin) — scheitert das, **wird nichts entfernt**
-2. Extension deaktivieren und entfernen
-3. Eigene Tabellen löschen (`--keep-data` behält sie, z. B. für ein Update)
-4. Caches leeren, Queue neu starten
+1. All non-Owners lose admin status (Owners stay admins) – if this fails, **nothing is removed**
+2. Disable and remove the extension
+3. Drop its own tables, including the tickets (`--keep-data` keeps them, e.g. for an update)
+4. Clear caches, restart the queue
 
-Danach ist das Panel wie vorher. Wer wieder Admin sein soll: Admin → Users → bearbeiten.
+Afterwards the panel is as before. Anyone who should be an admin again: Admin → Users → edit.
 
-**Ohne Skript, per Hand:**
+**By hand, without the script:**
 
 ```bash
 cd /var/www/pterodactyl
-php /pfad/zu/tools/team-tool.php /var/www/pterodactyl demote-staff   # ZUERST
+php /path/to/tools/team-tool.php /var/www/pterodactyl demote-staff   # FIRST
 php artisan p:extension:disable team-roles
 php artisan p:extension:remove team-roles
-php /pfad/zu/tools/team-tool.php /var/www/pterodactyl drop-tables
+php /path/to/tools/team-tool.php /var/www/pterodactyl drop-tables
 php artisan optimize:clear && php artisan queue:restart
 ```
 
-**Notfall** (Teamverwaltung spinnt, Moderatoren sollen sofort raus):
+**Emergency** (team management misbehaves, Moderators must leave immediately):
 
 ```bash
 php tools/team-tool.php /var/www/pterodactyl demote-staff
 ```
 
-Der Owner kann außerdem jederzeit per Konsole einen neuen Admin anlegen (`php artisan p:user:make`);
-ein Konsolen-Admin ohne Rolle wird automatisch Owner.
-
 ---
 
-## Was geprüft wurde — und was nicht
+## What was tested – and what was not
 
-**Geprüft (in der Entwicklungsumgebung):**
+**Tested (in the development environment):**
 
-* PHP-Syntax aller Dateien, Shell-Skripte, JavaScript, `extension.json`
-* **Rechte-Logik:** 40 Prüfungen (`tests/policy_test.php`) — Moderator darf nur lesen, Extensions/Teamverwaltung
-  immer Owner-only, Rang-Regel, Admin-Flag-Schutz, Client-API-Regeln
-* **Oberfläche:** 28 Prüfungen mit simuliertem React/SDK (Registrierung passt zum Manifest, Matrix,
-  Mitgliederliste, Rollen-Reiter, Fehlerfälle)
-* **Installer/Deinstaller** mit Fake-Panel: Reihenfolge (erst herabstufen, dann entfernen), Abbruch bei
-  Fehler, automatisches Zurückrollen (genau einmal), Abbruch durch „n“
+* PHP syntax of all files, shell scripts, JavaScript, `extension.json`
+* **Permission logic:** 46 checks (`tests/policy_test.php`)
+* **Ticket rules** (who may see/reply/manage, validation, status, "unread"): 66 checks (`tests/ticket_rules_test.php`)
+* **Ticket database logic** on an SQLite stand-in for Laravel's query builder: 39 checks (`tests/ticket_service_test.php`)
+* **User interface** with a simulated React/SDK and a fake backend: 75 checks (`tests/ui/run.mjs`) – customer creates a
+  ticket with priority, team replies, notifications, language switch EN/DE, rights editor, matching of manifest
+  and registered screens/slots
+* **Installer/uninstaller/update/setup** with a fake panel and a mock GitHub API
 
-**Nicht geprüft:**
+**Not tested:**
 
-* **Kein Lauf gegen ein echtes Pterodactyl-2.0-Panel.** Entwicklungsumgebung hatte kein Panel.
-* `tests/service_test.php` (Datenbank-Logik gegen SQLite) wurde **nicht ausgeführt**, weil Packagist dort
-  gesperrt war. Die Datei liegt bei, ist aber ungeprüft.
+* **No run against a real Pterodactyl 2.0 panel.** The development environment had none. The SQLite stand-in is *not*
+  real Laravel, so the first real run may show small differences.
+* `tests/service_test.php` (role logic against SQLite via Laravel) was **not executed** (Packagist was blocked).
+* The GitHub Action has not run for this version yet.
+* How the **"Support (n)" pill and banners** look in the 2.0 navigation depends on the panel theme.
 
-**Annahmen über das 2.0-Panel** (aus Doku + `bootstrap/app.php`, nicht aus dem restlichen Quellcode):
+**Assumptions about the 2.0 panel** (from the docs + `bootstrap/app.php`):
 
-| Annahme | Falls falsch |
+| Assumption | If wrong |
 |---|---|
-| Spalte `users.root_admin` existiert | Die Migration bricht **vor jeder Änderung** mit klarer Meldung ab |
-| Admin-API liegt unter `/api/admin/<bereich>` mit Bereichen wie `users`, `servers`, `nodes`, `locations`, `eggs`, `mounts`, `database-hosts`, `tags`, `activity`, `settings`, `api-keys` | Abweichende Bereiche fallen unter „Sonstige Admin-Bereiche“ (nur Lesen, nur mit Recht) bzw. werden bei Schreibzugriff gesperrt → eher zu streng als zu offen; Zuordnung in `src/Support/PermissionMap.php` anpassen |
-| Route-Parameter `server` ist in der `client-api`-Gruppe schon aufgelöst; Tabelle `subusers`, Spalte `owner_id` | Moderatoren bräuchten dann „Zugriff auf fremde Server“ auch für eigene Server (zu streng, nicht zu offen) |
-| Benutzer-IDs in Admin-Routen sind Zahlen (oder werden als Modell aufgelöst) | Bearbeiten/Löschen als Nicht-Owner wird gesperrt (zu streng) |
-| Screens bekommen die Benutzer-ID als `params.id` oder `resource` | Reiter „Rolle“ meldet „Benutzer-ID konnte nicht ermittelt werden“; die Teamverwaltung-Seite funktioniert trotzdem |
+| Column `users.root_admin` exists | The migration aborts **before any change** with a clear message |
+| Admin API under `/api/admin/<area>` with areas like `users`, `servers`, `nodes`, … | Different areas fall under "Other admin areas" (read-only) / are blocked for writes → too strict rather than too open; adjust `src/Support/PermissionMap.php` |
+| `routes/client.php` is reachable by every signed-in user at `/api/client/extensions/team-roles` | Tickets would not load; the admin pages still work |
+| Account screens (`area: account`) appear in the account menu | Tickets stay reachable at `/account/support` and via the tab bar |
+| Screens get the user id as `params.id` or `resource` | The "Role" tab says the user ID could not be determined; Team management still works |
 
-Wenn auf dem Test-Panel etwas davon nicht stimmt, ist es meist eine Zeile in `PermissionMap.php`
-oder `client.js` — **sag Bescheid** und schick die Fehlermeldung.
+If something does not match on your test panel it is usually one line in `PermissionMap.php` or `client.js` –
+**tell me** and send the error message.
 
 ---
 
-## Ordner
+## Folder
 
 ```
-setup.sh                        Menü: Installieren / Deinstallieren / Aktualisieren (Ein-Befehl-Installer)
-install.sh · uninstall.sh        Installer / Deinstaller
-update.sh                        Update aus GitHub-Releases (mit Prüfsumme und Rollback)
-.github/workflows/release.yml    Prüfungen + automatisches Release bei Tag vX.Y.Z
-tools/team-tool.php              Prüfen, Sichern, Herabstufen, Tabellen entfernen (auch für den Notfall)
-extension/team-roles/            die eigentliche Extension (Backend PHP, Oberfläche dist/client.js)
-tests/                           Rechte-Test (läuft ohne Panel) + Datenbank-Test (ungeprüft)
-backups/                         Sicherung der Admin-Konten vor der Installation
+setup.sh                        Menu: install / uninstall / update (one-command installer)
+install.sh · uninstall.sh        Installer / uninstaller
+update.sh                        Update from GitHub releases (with checksum and rollback)
+.github/workflows/release.yml    Checks + automatic release
+tools/team-tool.php              Check, back up, demote, drop tables (also for emergencies)
+extension/team-roles/            the extension itself (PHP backend, UI in dist/client.js)
+tests/                           Permission, ticket and UI tests (run without a panel)
+backups/                         Backup of the admin accounts before installing (never committed)
 ```
 
-Hinweis: `dist/client.js` ist von Hand geschrieben (ein ES-Modul, nutzt React und das SDK des Panels
-zur Laufzeit) — **kein `npm install`/Build nötig**.
+Note: `dist/client.js` is hand-written (one ES module, uses React and the SDK of the panel at runtime) –
+**no `npm install`/build needed**.
 
-*Teamverwaltung · von floiofficial*
+*Team management · by floiofficial*

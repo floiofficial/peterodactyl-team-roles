@@ -1,8 +1,8 @@
 {
     "id": "team-roles",
-    "name": "Teamverwaltung",
-    "version": "1.0.0",
-    "description": "Rollen (Owner, Administrator, Moderator, Freund, Kunde) mit einstellbaren Rechten. Von floiofficial.",
+    "name": "Team management",
+    "version": "1.1.0",
+    "description": "Roles (Owner, Administrator, Moderator, Friend, User / Customer) with configurable rights, plus a support ticket system with notifications. By floiofficial.",
     "author": "floiofficial",
     "icon": "shield-check",
     "requires": {
@@ -20,15 +20,28 @@
             {
                 "id": "team",
                 "area": "admin",
-                "path": "team",
-                "nav": { "label": "Teamverwaltung", "icon": "shield-check", "order": 5 }
+                "path": "team"
             },
             {
                 "id": "user-role",
                 "area": "admin",
                 "parent": "admin.user",
                 "path": "role",
-                "nav": { "label": "Rolle", "icon": "user-cog", "order": 5 }
+                "nav": {
+                    "label": "Role",
+                    "icon": "user-cog",
+                    "order": 5
+                }
+            },
+            {
+                "id": "support",
+                "area": "account",
+                "path": "support",
+                "nav": {
+                    "label": "Support",
+                    "icon": "life-buoy",
+                    "order": 5
+                }
             }
         ]
     }

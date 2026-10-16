@@ -1,7 +1,7 @@
 <?php
 
-// Teamverwaltung - von floiofficial.
-// Wird unter /api/admin/extensions/team-roles/... geladen. Nur Owner (wird im Controller erneut geprueft).
+// Team management - by floiofficial.
+// Loaded under /api/admin/extensions/team-roles/... Owner only (checked again in the controller).
 
 use Illuminate\Support\Facades\Route;
 use TeamRoles\Http\Controllers\TeamController;

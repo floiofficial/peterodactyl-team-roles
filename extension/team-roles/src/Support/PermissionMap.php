@@ -5,22 +5,22 @@ declare(strict_types=1);
 namespace TeamRoles\Support;
 
 /**
- * Teamverwaltung - von floiofficial.
+ * Team management - by floiofficial.
  *
- * Reine Datenklasse (keine Laravel-Abhaengigkeit): beschreibt, welche Rechte es gibt
- * und welcher URL-Bereich der Admin-API zu welchem Recht gehoert.
+ * Pure data class (no Laravel dependency): describes which permissions exist and which
+ * URL area of the admin API belongs to which permission.
  */
 final class PermissionMap
 {
-    /** Aktionen, abgeleitet aus der HTTP-Methode. */
+    /** Actions, derived from the HTTP method. */
     public const ACTIONS = [
-        'view' => 'Ansehen',
-        'create' => 'Erstellen / Aktionen',
-        'edit' => 'Bearbeiten',
-        'delete' => 'Löschen',
+        'view' => 'View',
+        'create' => 'Create / actions',
+        'edit' => 'Edit',
+        'delete' => 'Delete',
     ];
 
-    /** URL-Segment unter /api/admin/ bzw. /api/application/ => Recht-Bereich. */
+    /** URL segment below /api/admin/ or /api/application/ => permission area. */
     private const SEGMENTS = [
         'users' => 'users',
         'servers' => 'servers',
@@ -52,23 +52,53 @@ final class PermissionMap
         $all = array_keys(self::ACTIONS);
 
         return [
-            'users' => ['label' => 'Benutzer', 'hint' => 'Konten anderer Nutzer. Nur Nutzer mit niedrigerem Rang änderbar; Rollen vergibt nur der Owner.', 'danger' => false, 'actions' => $all],
-            'servers' => ['label' => 'Server (Verwaltung)', 'hint' => 'Server anlegen, sperren, bearbeiten, löschen.', 'danger' => false, 'actions' => $all],
-            'nodes' => ['label' => 'Nodes', 'hint' => 'Wings-Nodes und Allocations.', 'danger' => false, 'actions' => $all],
+            'users' => ['label' => 'Users', 'hint' => 'Accounts of other users. Only users with a lower rank can be changed; only the Owner assigns roles.', 'danger' => false, 'actions' => $all],
+            'servers' => ['label' => 'Servers (management)', 'hint' => 'Create, suspend, edit and delete servers.', 'danger' => false, 'actions' => $all],
+            'nodes' => ['label' => 'Nodes', 'hint' => 'Wings nodes and allocations.', 'danger' => false, 'actions' => $all],
             'locations' => ['label' => 'Locations', 'hint' => '', 'danger' => false, 'actions' => $all],
-            'eggs' => ['label' => 'Eggs & Nests', 'hint' => 'Inklusive Egg-Katalog.', 'danger' => false, 'actions' => $all],
+            'eggs' => ['label' => 'Eggs & nests', 'hint' => 'Including the egg catalog.', 'danger' => false, 'actions' => $all],
             'mounts' => ['label' => 'Mounts', 'hint' => '', 'danger' => false, 'actions' => $all],
-            'database-hosts' => ['label' => 'Datenbank-Hosts', 'hint' => '', 'danger' => false, 'actions' => $all],
+            'database-hosts' => ['label' => 'Database hosts', 'hint' => '', 'danger' => false, 'actions' => $all],
             'tags' => ['label' => 'Tags', 'hint' => '', 'danger' => false, 'actions' => $all],
-            'activity' => ['label' => 'Aktivitätslog', 'hint' => 'Nur lesbar.', 'danger' => false, 'actions' => ['view']],
-            'settings' => ['label' => 'Panel-Einstellungen', 'hint' => 'Mail, Branding, Sicherheit - vorsichtig vergeben.', 'danger' => true, 'actions' => $all],
-            'api-keys' => ['label' => 'API-Schlüssel', 'hint' => 'Schlüssel gelten nur im Rahmen der Rolle ihres Erstellers.', 'danger' => true, 'actions' => $all],
-            'server-access' => ['label' => 'Zugriff auf fremde Server', 'hint' => 'Konsole, Dateien, Backups, Datenbanken usw. von Servern, die dem Nutzer nicht gehören.', 'danger' => true, 'actions' => $all],
-            'other' => ['label' => 'Sonstige Admin-Bereiche', 'hint' => 'Nicht zugeordnete Admin-Seiten, nur lesbar.', 'danger' => false, 'actions' => ['view']],
+            'activity' => ['label' => 'Activity log', 'hint' => 'Read-only.', 'danger' => false, 'actions' => ['view']],
+            'settings' => ['label' => 'Panel settings', 'hint' => 'Mail, branding, security - grant with care.', 'danger' => true, 'actions' => $all],
+            'api-keys' => ['label' => 'API keys', 'hint' => 'Keys only work within the role of their creator.', 'danger' => true, 'actions' => $all],
+            'server-access' => ['label' => 'Access to other users\' servers', 'hint' => 'Console, files, backups, databases etc. of servers the user does not own.', 'danger' => true, 'actions' => $all],
+            'other' => ['label' => 'Other admin areas', 'hint' => 'Admin pages not listed here, read-only.', 'danger' => false, 'actions' => ['view']],
+            // Support tickets: these rights NEVER grant access to the admin area (see grantsAdminAccess()).
+            'tickets' => ['label' => 'Support tickets', 'hint' => 'Everyone can always create tickets and see their own. These rights control access to OTHER people\'s tickets.', 'danger' => false, 'actions' => self::TICKET_ACTIONS],
         ];
     }
 
-    /** @return list<string> alle vergebbaren Rechte, z.B. "users.view". */
+    /** Actions of the "tickets" area (own column set in the UI). */
+    public const TICKET_ACTIONS = ['view', 'reply', 'manage', 'delete', 'notify'];
+
+    public const TICKET_ACTION_LABELS = [
+        'view' => 'See all tickets',
+        'reply' => 'Reply to tickets',
+        'manage' => 'Change status & priority',
+        'delete' => 'Delete tickets',
+        'notify' => 'Get notified (new tickets & replies)',
+    ];
+
+    /**
+     * Does this permission list give access to the admin area?
+     * Ticket rights alone must never turn someone into a (root) admin.
+     *
+     * @param list<string> $permissions
+     */
+    public static function grantsAdminAccess(array $permissions): bool
+    {
+        foreach ($permissions as $permission) {
+            if (is_string($permission) && ! str_starts_with($permission, 'tickets.')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** @return list<string> all grantable permissions, e.g. "users.view". */
     public static function allKeys(): array
     {
         $keys = [];
@@ -106,7 +136,7 @@ final class PermissionMap
         };
     }
 
-    /** Aufbereitet fuer die Oberflaeche. */
+    /** Prepared for the UI. */
     public static function catalogForUi(): array
     {
         $actions = [];
@@ -119,6 +149,11 @@ final class PermissionMap
             $resources[] = ['key' => $key] + $meta;
         }
 
-        return ['actions' => $actions, 'resources' => $resources];
+        $ticketActions = [];
+        foreach (self::TICKET_ACTION_LABELS as $key => $label) {
+            $ticketActions[] = ['key' => $key, 'label' => $label];
+        }
+
+        return ['actions' => $actions, 'ticketActions' => $ticketActions, 'resources' => $resources];
     }
 }

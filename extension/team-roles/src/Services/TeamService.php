@@ -11,11 +11,11 @@ use TeamRoles\Support\Defaults;
 use TeamRoles\Support\PermissionMap;
 
 /**
- * Teamverwaltung - von floiofficial.
+ * Team management - by floiofficial.
  *
- * Alles rund um Rollen und Mitglieder. Quelle der Wahrheit ist die Rolle in
- * ext_team_roles_members; die Spalte users.root_admin wird daraus abgeleitet
- * (noetig, damit Moderator/Administrator ueberhaupt in den Admin-Bereich kommen).
+ * Everything about roles and members. The source of truth is the role in
+ * ext_team_roles_members; the users.root_admin column is derived from it
+ * (needed so moderators/administrators get into the admin area at all).
  */
 final class TeamService
 {
@@ -36,7 +36,7 @@ final class TeamService
 
     // ------------------------------------------------------------------ Lesen
 
-    /** Rolle eines Benutzers (Rang, Rechte). Legt fehlende Daten beim ersten Zugriff an. */
+    /** Role of a user (rank, rights). Creates missing data on first access. */
     public function roleFor(object $user): array
     {
         $id = (int) $user->id;
@@ -61,7 +61,7 @@ final class TeamService
             return $role['rank'];
         }
 
-        // Kein Eintrag: Root-Admin ohne Rolle zaehlt vorsichtshalber als Owner.
+        // No entry: a root admin without a role counts as Owner to be safe.
         $isRoot = (int) $this->db->table('users')->where('id', $userId)->value('root_admin') === 1;
         $slug = $isRoot ? Defaults::OWNER : Defaults::USER;
 
@@ -88,7 +88,7 @@ final class TeamService
                 'rank' => (int) $row->rank,
                 'locked' => $owner,
                 'permissions' => $permissions,
-                'staff' => $owner || $permissions !== [],
+                'staff' => $owner || PermissionMap::grantsAdminAccess($permissions),
                 'members' => $counts[$row->slug] ?? 0,
             ];
         }
@@ -156,16 +156,16 @@ final class TeamService
         $this->ensureRoles();
 
         if ($slug === Defaults::OWNER) {
-            throw new InvalidArgumentException('Die Rechte des Owners sind nicht änderbar.');
+            throw new InvalidArgumentException('The Owner\'s permissions cannot be changed.');
         }
         if (! $this->db->table(self::ROLES)->where('slug', $slug)->exists()) {
-            throw new InvalidArgumentException('Unbekannte Rolle.');
+            throw new InvalidArgumentException('Unknown role.');
         }
 
         $clean = [];
         foreach ($permissions as $permission) {
             if (! is_string($permission) || ! PermissionMap::isGrantable($permission)) {
-                throw new InvalidArgumentException('Unbekanntes Recht: ' . (is_string($permission) ? $permission : gettype($permission)));
+                throw new InvalidArgumentException('Unknown permission: ' . (is_string($permission) ? $permission : gettype($permission)));
             }
             $clean[$permission] = true;
         }
@@ -186,15 +186,15 @@ final class TeamService
         $this->ensureRoles();
 
         if (! $this->db->table(self::ROLES)->where('slug', $slug)->exists()) {
-            throw new InvalidArgumentException('Unbekannte Rolle.');
+            throw new InvalidArgumentException('Unknown role.');
         }
         if (! $this->db->table('users')->where('id', $userId)->exists()) {
-            throw new InvalidArgumentException('Benutzer nicht gefunden.');
+            throw new InvalidArgumentException('User not found.');
         }
 
         $current = $this->db->table(self::MEMBERS)->where('user_id', $userId)->value('role_slug');
         if ($current === Defaults::OWNER && $slug !== Defaults::OWNER && $this->countOwners() <= 1) {
-            throw new DomainException('Es muss mindestens ein Owner bleiben.');
+            throw new DomainException('There must always be at least one Owner.');
         }
 
         $now = $this->now();
@@ -210,7 +210,7 @@ final class TeamService
 
     // ---------------------------------------------------------------- Abgleich
 
-    /** Standard-Rollen anlegen (nur wenn sie fehlen) und alle Benutzer abgleichen. */
+    /** Create the default roles (only if missing) and reconcile all users. */
     public function bootstrap(): void
     {
         $this->ensureRoles();
@@ -219,8 +219,8 @@ final class TeamService
 
     /**
      * 1. Waisen-Eintraege entfernen
-     * 2. Benutzer ohne Rolle: Root-Admin => Owner (bisheriges Verhalten bleibt), sonst Benutzer
-     * 3. users.root_admin aus der Rolle ableiten (Staff = Owner oder Rolle mit mindestens einem Recht)
+     * 2. Users without a role: root admin => Owner (previous behaviour stays), otherwise User
+     * 3. users.root_admin aus der Rolle ableiten (staff = Owner or a role with at least one non-ticket permission)
      */
     public function reconcile(): void
     {
@@ -260,7 +260,7 @@ final class TeamService
     {
         $slugs = [Defaults::OWNER];
         foreach ($this->db->table(self::ROLES)->get(['slug', 'permissions']) as $row) {
-            if ($row->slug !== Defaults::OWNER && $this->decode($row->permissions) !== []) {
+            if ($row->slug !== Defaults::OWNER && PermissionMap::grantsAdminAccess($this->decode($row->permissions))) {
                 $slugs[] = $row->slug;
             }
         }
@@ -308,13 +308,13 @@ final class TeamService
             'name' => (string) $row->name,
             'rank' => (int) $row->rank,
             'permissions' => $permissions,
-            'staff' => $owner || $permissions !== [],
+            'staff' => $owner || PermissionMap::grantsAdminAccess($permissions),
         ];
     }
 
     private function fallbackRole(): array
     {
-        return ['slug' => Defaults::USER, 'name' => 'Benutzer / Kunde', 'rank' => 10, 'permissions' => [], 'staff' => false];
+        return ['slug' => Defaults::USER, 'name' => 'User / Customer', 'rank' => 10, 'permissions' => [], 'staff' => false];
     }
 
     /** @return list<string> */

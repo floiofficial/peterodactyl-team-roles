@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace TeamRoles\Support;
 
 /**
- * Teamverwaltung - von floiofficial.
+ * Team management - by floiofficial.
  *
  * Reine Entscheidungslogik (ohne Laravel, deshalb einzeln testbar).
- * Die Middleware ruft nur noch diese Klasse auf und setzt das Ergebnis durch.
+ * The middleware only calls this class and enforces the result.
  *
  * $role = ['slug' => string, 'rank' => int, 'permissions' => list<string>]
  */
@@ -45,9 +45,9 @@ final class Policy
             return $allow($resource, PermissionMap::actionFor($method));
         }
 
-        // Extensions installieren/ausfuehren = Code auf dem Server. Immer nur Owner.
+        // Installing/running extensions = code on the server. Owner only, always.
         if ($first === 'extensions') {
-            return $deny('Extensions und die Teamverwaltung darf nur der Owner verwalten.');
+            return $deny('Only the Owner may manage extensions and team management.');
         }
 
         $resource = PermissionMap::resourceForSegment($first) ?? 'other';
@@ -55,12 +55,12 @@ final class Policy
         $meta = PermissionMap::resources()[$resource];
 
         if (! in_array($action, $meta['actions'], true)) {
-            return $deny('Diese Aktion ist in diesem Bereich nur dem Owner erlaubt.', $resource, $action);
+            return $deny('This action is only allowed for the Owner in this area.', $resource, $action);
         }
 
         $key = $resource . '.' . $action;
         if (! in_array($key, $role['permissions'], true)) {
-            return $deny('Dir fehlt das Recht "' . $key . '".', $resource, $action);
+            return $deny('You are missing the permission "' . $key . '".', $resource, $action);
         }
 
         $write = PermissionMap::isWrite($method);
@@ -75,8 +75,8 @@ final class Policy
     }
 
     /**
-     * Client-API (/api/client). Betrifft nur Nutzer, die ueber eine Rolle Admin-Status haben:
-     * Der Core laesst Root-Admins auf JEDEN Server. Hier wird das auf "server-access" begrenzt.
+     * Client API (/api/client). Only affects users who are admins through a role:
+     * the core lets root admins into EVERY server. Here that is limited to "server-access".
      *
      * @return array{permission: ?string, serverScope: bool}
      */
@@ -105,7 +105,7 @@ final class Policy
         return $pass;
     }
 
-    /** true, wenn die Anfrage Benutzer anlegt/aendert/loescht (danach wird abgeglichen). */
+    /** true if the request creates/changes/deletes users (roles are reconciled afterwards). */
     public static function writesUsers(string $area, string $method, string $rest): bool
     {
         if (! in_array($area, ['admin', 'application'], true) || ! PermissionMap::isWrite($method)) {
@@ -116,7 +116,7 @@ final class Policy
         return PermissionMap::resourceForSegment($first) === 'users';
     }
 
-    /** users/123/... => 123, "users" => null, users/<kein Zahl> => null (unklar). */
+    /** users/123/... => 123, "users" => null, users/<not a number> => null (unclear). */
     public static function targetUserId(string $rest): ?int
     {
         $segments = explode('/', $rest);

@@ -1,16 +1,16 @@
-# Teamverwaltung - von floiofficial
+# Team management - by floiofficial
 
-# NIEMALS einchecken: enthaelt Benutzernamen und E-Mail-Adressen deiner Admins
+# NEVER commit: contains usernames and e-mail addresses of your admins
 backups/*
 !backups/.gitkeep
 
-# Zugangsdaten / lokale Einstellungen
+# credentials / local settings
 .env
 .update-repo
 *.pem
 *.key
 
-# Build-/Testreste
+# build / test leftovers
 node_modules/
 vendor/
 *.zip

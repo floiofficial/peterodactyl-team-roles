@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace TeamRoles\Support;
 
 /**
- * Teamverwaltung - von floiofficial.
+ * Team management - by floiofficial.
  *
- * Standard-Rollen. Der Owner hat implizit ALLE Rechte (nichts davon wird gespeichert).
+ * Default roles. The Owner implicitly has ALL permissions (nothing of that is stored).
  */
 final class Defaults
 {
@@ -24,8 +24,8 @@ final class Defaults
             ['slug' => self::OWNER, 'name' => 'Owner', 'rank' => 100, 'permissions' => []],
             ['slug' => self::ADMINISTRATOR, 'name' => 'Administrator', 'rank' => 80, 'permissions' => self::administratorPermissions()],
             ['slug' => self::MODERATOR, 'name' => 'Moderator', 'rank' => 60, 'permissions' => self::moderatorPermissions()],
-            ['slug' => self::FRIEND, 'name' => 'Freund', 'rank' => 20, 'permissions' => []],
-            ['slug' => self::USER, 'name' => 'Benutzer / Kunde', 'rank' => 10, 'permissions' => []],
+            ['slug' => self::FRIEND, 'name' => 'Friend', 'rank' => 20, 'permissions' => self::friendPermissions()],
+            ['slug' => self::USER, 'name' => 'User / Customer', 'rank' => 10, 'permissions' => []],
         ];
     }
 
@@ -34,7 +34,7 @@ final class Defaults
     {
         $keys = [];
         foreach (PermissionMap::allKeys() as $key) {
-            // Heikle Bereiche bleiben standardmaessig nur lesbar bzw. aus.
+            // Sensitive areas stay read-only / off by default.
             if (str_starts_with($key, 'api-keys.')) {
                 continue;
             }
@@ -55,6 +55,18 @@ final class Defaults
             $keys[] = $resource . '.view';
         }
 
-        return $keys;
+        return array_merge($keys, self::staffTicketPermissions());
+    }
+
+    /** @return list<string> */
+    public static function friendPermissions(): array
+    {
+        return self::staffTicketPermissions();
+    }
+
+    /** Tickets: see, reply, get notified (no manage/delete by default). @return list<string> */
+    public static function staffTicketPermissions(): array
+    {
+        return ['tickets.view', 'tickets.reply', 'tickets.notify'];
     }
 }

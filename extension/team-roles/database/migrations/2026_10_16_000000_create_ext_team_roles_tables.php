@@ -1,8 +1,8 @@
 <?php
 
-// Teamverwaltung - von floiofficial.
-// Legt nur zwei eigene Tabellen an (Prefix ext_team_roles_). Bestehende Panel-Tabellen
-// werden hier NICHT veraendert. Die Standard-Rollen werden beim ersten Zugriff angelegt.
+// Team management - by floiofficial.
+// Creates only two tables of its own (prefix ext_team_roles_). Existing panel tables are NOT
+// changed here. The default roles are created on first access.
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -13,8 +13,8 @@ return new class extends Migration {
     {
         if (! Schema::hasTable('users') || ! Schema::hasColumn('users', 'root_admin')) {
             throw new RuntimeException(
-                'Teamverwaltung: Tabelle "users" bzw. Spalte "root_admin" nicht gefunden. '
-                . 'Installation abgebrochen, es wurde nichts verändert.'
+                'Team management: table "users" or column "root_admin" not found. '
+                . 'Installation aborted, nothing was changed.'
             );
         }
 
@@ -33,8 +33,8 @@ return new class extends Migration {
         if (! Schema::hasTable('ext_team_roles_members')) {
             Schema::create('ext_team_roles_members', function (Blueprint $table) {
                 $table->id();
-                // Bewusst ohne Fremdschluessel: unabhaengig vom Typ von users.id,
-                // Waisen-Eintraege raeumt die Extension selbst auf.
+                // Deliberately no foreign key: independent of the type of users.id,
+                // orphaned entries are cleaned up by the extension itself.
                 $table->unsignedBigInteger('user_id')->unique();
                 $table->string('role_slug', 32)->index();
                 $table->timestamps();
