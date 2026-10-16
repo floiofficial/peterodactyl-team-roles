@@ -157,7 +157,8 @@ einem **öffentlichen** Repo. Ein **privates** Repo ist für dieses Projekt die 
 **2. Neue Version veröffentlichen:**
 
 1. `"version"` in `extension/team-roles/extension.json` erhöhen (z. B. `1.1.0`), committen, pushen
-2. `git tag v1.1.0 && git push origin v1.1.0`
+2. `git tag v1.1.0 && git push origin v1.1.0` — **oder ohne Terminal:** GitHub → *Actions* → „Pruefen und Release“ →
+   *Run workflow* (Branch `main`). Die Action legt den Tag `v<Version>` dann selbst an.
 3. Die Action „Pruefen und Release“ prüft den Code und legt das Release an. Der Tag **muss** zur Version
    im Manifest passen (sonst bricht sie ab).
 
