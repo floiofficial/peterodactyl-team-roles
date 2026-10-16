@@ -160,6 +160,14 @@ const EN = {
     'sup.statusChanged': 'Status changed.',
     'sup.priorityChanged': 'Priority changed.',
     'sup.noAccess': 'You are not allowed to see all tickets.',
+    'att.label': 'Attachments (optional)',
+    'att.hint': 'Screenshots (PNG, JPG, GIF, WebP) or text files (.txt, .log). Up to {n} files, {mb} MB each.',
+    'att.add': 'Add files',
+    'att.remove': 'Remove',
+    'att.tooMany': 'You can attach at most {n} files.',
+    'att.tooBig': '"{name}" is larger than {mb} MB.',
+    'att.title': 'Attachments',
+    'att.failed': 'The file could not be downloaded.',
     'mail.label': 'E-mail me when there is a new message in a ticket',
     'mail.hint': 'Sent to the e-mail address of your account. You can change this at any time; the panel notification stays.',
     'mail.on': 'E-mail notifications are on.',
@@ -331,6 +339,14 @@ const DE = {
     'sup.statusChanged': 'Status geändert.',
     'sup.priorityChanged': 'Priorität geändert.',
     'sup.noAccess': 'Du darfst nicht alle Tickets sehen.',
+    'att.label': 'Anhänge (optional)',
+    'att.hint': 'Screenshots (PNG, JPG, GIF, WebP) oder Textdateien (.txt, .log). Bis zu {n} Dateien, je {mb} MB.',
+    'att.add': 'Dateien hinzufügen',
+    'att.remove': 'Entfernen',
+    'att.tooMany': 'Du kannst höchstens {n} Dateien anhängen.',
+    'att.tooBig': '„{name}“ ist größer als {mb} MB.',
+    'att.title': 'Anhänge',
+    'att.failed': 'Die Datei konnte nicht heruntergeladen werden.',
     'mail.label': 'Per E-Mail benachrichtigen, wenn es eine neue Nachricht in einem Ticket gibt',
     'mail.hint': 'Gesendet an die E-Mail-Adresse deines Kontos. Du kannst das jederzeit ändern; die Benachrichtigung im Panel bleibt.',
     'mail.on': 'E-Mail-Benachrichtigungen sind an.',
@@ -409,6 +425,7 @@ const api = (base) => ({
     get: (path, params) => http.get(base + path, { params }).then((r) => r.data),
     post: (path, body) => http.post(base + path, body).then((r) => r.data),
     put: (path, body) => http.put(base + path, body).then((r) => r.data),
+    blob: (path) => http.get(base + path, { responseType: 'blob' }).then((r) => r.data),
     del: (path) => http.delete(base + path).then((r) => r.data),
 });
 const admin = api(ADMIN_BASE);
@@ -461,6 +478,7 @@ const S = {
     danger: { display: 'inline-block', marginLeft: 8, padding: '1px 6px', borderRadius: 4, fontSize: 11, border: '1px solid #d9534f', color: '#d9534f' },
     link: { background: 'none', border: 0, padding: 0, color: 'inherit', textDecoration: 'underline', cursor: 'pointer', font: 'inherit', fontSize: 12, opacity: 0.8 },
     anchor: { color: 'inherit', textDecoration: 'underline' },
+    linkBtn: { color: 'inherit', textDecoration: 'underline', background: 'none', border: 0, padding: 0, cursor: 'pointer', font: 'inherit', textAlign: 'left' },
     tab: (on) => ({ padding: '6px 12px', borderRadius: 6, border: '1px solid ' + LINE, background: on ? 'color-mix(in srgb, currentColor 14%, transparent)' : 'transparent', color: 'inherit', cursor: 'pointer', font: 'inherit', fontWeight: on ? 600 : 400, textDecoration: 'none', display: 'inline-block' }),
     btn: (kind, disabled) => ({
         padding: '7px 14px', borderRadius: 6, font: 'inherit', fontWeight: 600, cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.55 : 1,
@@ -851,6 +869,7 @@ function NewTicket({ onCreated, onCancel }) {
     const [subject, setSubject] = useState('');
     const [description, setDescription] = useState('');
     const [priority, setPriority] = useState('normal');
+    const [files, setFiles] = useState([]);
     const [errors, setErrors] = useState({});
     const [busy, setBusy] = useState(false);
 
@@ -865,7 +884,7 @@ function NewTicket({ onCreated, onCancel }) {
         if (Object.keys(local).length) return;
 
         setBusy(true);
-        client.post('/tickets', { subject, description, priority })
+        client.post('/tickets', withFiles({ subject, description, priority }, files))
             .then((ticket) => { toast.ok(t('sup.created', { id: ticket.id })); pollSummary(); onCreated(ticket.id); })
             .catch((e) => { const fe = fieldErrors(e); if (Object.keys(fe).length) setErrors(fe); else toast.err(errText(e)); })
             .finally(() => setBusy(false));
@@ -885,6 +904,7 @@ function NewTicket({ onCreated, onCancel }) {
                 h('select', { style: S.control, value: priority, onChange: (e) => setPriority(e.target.value) },
                     PRIORITIES.map((p) => h('option', { key: p, value: p }, t('prio.' + p + '.hint')))),
                 errors.priority),
+            h(FilePicker, { files, onChange: setFiles, error: errors.files }),
             h('div', { style: S.row },
                 h(Btn, { kind: 'primary', type: 'submit', loading: busy }, t('sup.submit')),
                 h(Btn, { onClick: onCancel }, t('sup.cancel')))));
@@ -950,20 +970,83 @@ function TicketList({ scope, onOpen, summaryKey }) {
         data ? h(Pager, { page, meta: data.meta, what: t('sup.tickets'), onPage: setPage }) : null);
 }
 
-function Message({ author, date, body, team, you }) {
+const MAX_FILES = 3;
+const MAX_FILE_MB = 5;
+
+// JSON when there are no files, multipart/form-data when there are.
+function withFiles(fields, files) {
+    if (!files || !files.length) return fields;
+    const form = new FormData();
+    Object.keys(fields).forEach((k) => form.append(k, fields[k]));
+    files.forEach((f) => form.append('files[]', f, f.name));
+    return form;
+}
+
+function formatSize(bytes) {
+    return bytes >= 1048576 ? (bytes / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(bytes / 1024)) + ' KB';
+}
+
+function FilePicker({ files, onChange, error }) {
+    const { t } = useT();
+    const pick = (ev) => {
+        const chosen = Array.from((ev.target && ev.target.files) || []);
+        try { ev.target.value = ''; } catch (e) { /* ignore */ }
+        const big = chosen.find((f) => f.size > MAX_FILE_MB * 1048576);
+        if (big) { toast.err(t('att.tooBig', { name: big.name, mb: MAX_FILE_MB })); return; }
+        const next = files.concat(chosen);
+        if (next.length > MAX_FILES) { toast.err(t('att.tooMany', { n: MAX_FILES })); return; }
+        onChange(next);
+    };
+    return h('div', { style: { display: 'grid', gap: 6 } },
+        h('span', { style: { fontWeight: 600, fontSize: 14 } }, t('att.label')),
+        h('span', { style: S.muted }, t('att.hint', { n: MAX_FILES, mb: MAX_FILE_MB })),
+        files.map((f, i) => h('div', { key: f.name + i, style: { ...S.row, gap: 8 } },
+            h('span', { style: { wordBreak: 'break-all' } }, f.name + ' (' + formatSize(f.size) + ')'),
+            h('button', { type: 'button', style: S.linkBtn, onClick: () => onChange(files.filter((_, j) => j !== i)) }, t('att.remove')))),
+        files.length < MAX_FILES
+            ? h('input', { type: 'file', multiple: true, accept: 'image/png,image/jpeg,image/gif,image/webp,.txt,.log,text/plain', onChange: pick })
+            : null,
+        error ? h('span', { style: { color: '#d9534f', fontSize: 13 }, role: 'alert' }, error) : null);
+}
+
+function AttachmentList({ ticketId, files }) {
+    const { t } = useT();
+    if (!files || !files.length) return null;
+    const open = (a) => {
+        client.blob('/tickets/' + ticketId + '/attachments/' + a.id)
+            .then((blob) => {
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = a.name;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 10000);
+            })
+            .catch(() => toast.err(t('att.failed')));
+    };
+    return h('div', { style: { ...S.row, gap: 8, marginTop: 8 } },
+        h('span', { style: S.muted }, t('att.title') + ':'),
+        files.map((a) => h('button', { key: a.id, type: 'button', style: S.linkBtn, onClick: () => open(a), title: a.name }, a.name + ' (' + formatSize(a.size) + ')')));
+}
+
+function Message({ author, date, body, team, you, ticketId, attachments }) {
     const { t, lang } = useT();
     return h('div', { style: { ...S.box, background: you ? 'transparent' : SOFT } },
         h('div', { style: { ...S.row, gap: 8, marginBottom: 6 } },
             h('strong', null, author),
             team ? h(Badge, { color: '#2563eb' }, t('sup.team')) : null,
             h('span', { style: S.muted }, fmtDate(lang, date))),
-        h('div', { style: { whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 14 } }, body));
+        h('div', { style: { whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: 14 } }, body),
+        h(AttachmentList, { ticketId, files: attachments }));
 }
 
 function TicketDetail({ id, onBack }) {
     const { t, lang } = useT();
     const [state, setState] = useState({ loading: true });
     const [reply, setReply] = useState('');
+    const [files, setFiles] = useState([]);
     const [busy, setBusy] = useState('');
 
     const load = useCallback(() => {
@@ -993,7 +1076,7 @@ function TicketDetail({ id, onBack }) {
     const send = (ev) => {
         ev.preventDefault();
         if (!reply.trim()) return;
-        run('reply', client.post('/tickets/' + id + '/messages', { body: reply }), t('sup.replied')).then((d) => { if (d) setReply(''); });
+        run('reply', client.post('/tickets/' + id + '/messages', withFiles({ body: reply }, files)), t('sup.replied')).then((d) => { if (d) { setReply(''); setFiles([]); } });
     };
     const setStatus = (value) => run('status', client.put('/tickets/' + id, { status: value }), t('sup.statusChanged'));
     const setPriority = (value) => run('priority', client.put('/tickets/' + id, { priority: value }), t('sup.priorityChanged'));
@@ -1028,13 +1111,14 @@ function TicketDetail({ id, onBack }) {
                     can.delete ? h(Btn, { kind: 'danger', loading: busy === 'delete', onClick: remove }, t('sup.delete')) : null)
                 : null),
         h('h3', { style: { margin: 0, fontSize: 16, fontWeight: 600 } }, t('sup.thread')),
-        h(Message, { author: tk.author.username, date: tk.created_at, body: tk.description, team: false, you: can.author }),
-        (tk.messages || []).map((m) => h(Message, { key: m.id, author: m.author.username, date: m.created_at, body: m.body, team: m.is_staff, you: false })),
+        h(Message, { author: tk.author.username, date: tk.created_at, body: tk.description, team: false, you: can.author, ticketId: tk.id, attachments: tk.attachments }),
+        (tk.messages || []).map((m) => h(Message, { key: m.id, author: m.author.username, date: m.created_at, body: m.body, team: m.is_staff, you: false, ticketId: tk.id, attachments: m.attachments })),
         can.reply
             ? h('form', { style: S.stack, onSubmit: send },
                 h('label', { style: { display: 'grid', gap: 4 } },
                     h('span', { style: { fontWeight: 600, fontSize: 14 } }, t('sup.reply')),
                     h('textarea', { style: { ...S.control, minHeight: 100, resize: 'vertical' }, value: reply, maxLength: 5000, placeholder: t('sup.replyPh'), onChange: (e) => setReply(e.target.value) })),
+                h(FilePicker, { files, onChange: setFiles }),
                 h('div', null, h(Btn, { kind: 'primary', type: 'submit', loading: busy === 'reply', disabled: !reply.trim() }, t('sup.send'))))
             : (tk.status === 'closed' ? h(Note, { type: 'info' }, t('sup.closedNote')) : null));
 }

@@ -45,6 +45,7 @@ const TICKETS = 'ext_team_roles_tickets';
 const TICKET_MESSAGES = 'ext_team_roles_ticket_messages';
 const TICKET_READS = 'ext_team_roles_ticket_reads';
 const TICKET_PREFS = 'ext_team_roles_ticket_prefs';
+const TICKET_FILES = 'ext_team_roles_ticket_attachments';
 
 function out(string $line): void
 {
@@ -253,14 +254,23 @@ switch ($command) {
         break;
 
     case 'drop-tables':
-        foreach ([TICKET_PREFS, TICKET_READS, TICKET_MESSAGES, TICKETS, MEMBERS, ROLES] as $table) {
+        foreach ([TICKET_FILES, TICKET_PREFS, TICKET_READS, TICKET_MESSAGES, TICKETS, MEMBERS, ROLES] as $table) {
             Schema::dropIfExists($table);
         }
         // Remove the migration records so that a later re-install creates the tables again.
         if (Schema::hasTable('migrations')) {
             DB::table('migrations')->where('migration', 'like', '%ext_team_roles%')->delete();
         }
-        out('Tables removed: ' . implode(', ', [TICKET_PREFS, TICKET_READS, TICKET_MESSAGES, TICKETS, MEMBERS, ROLES]));
+        // Uploaded ticket attachments (only our own folder).
+        $files = $panel . '/storage/app/team-roles';
+        if (is_dir($files) && ! is_link($files)) {
+            $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($files, FilesystemIterator::SKIP_DOTS), RecursiveIteratorIterator::CHILD_FIRST);
+            foreach ($it as $f) {
+                $f->isDir() && ! $f->isLink() ? @rmdir($f->getPathname()) : @unlink($f->getPathname());
+            }
+            @rmdir($files);
+        }
+        out('Tables removed: ' . implode(', ', [TICKET_FILES, TICKET_PREFS, TICKET_READS, TICKET_MESSAGES, TICKETS, MEMBERS, ROLES]));
         break;
 
     default:

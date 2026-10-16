@@ -51,7 +51,7 @@ Mehr dazu weiter unten bei „Ein-Befehl-Installer“. Vorher bitte die Hinweise
 
 **Jeder** (auch ein einfacher Benutzer/Kunde) kann:
 
-* ein Ticket erstellen: **Betreff**, Feld **„Was ist das Problem?“** und eine **Priorität** (Niedrig · Normal · Hoch · Dringend),
+* ein Ticket erstellen: **Betreff**, Feld **„Was ist das Problem?“** und eine **Priorität** (Niedrig · Normal · Hoch · Dringend), optional mit **Anhängen** (Screenshots / Textdateien),
 * **seine eigenen** Tickets sehen, weiterschreiben, schließen und wieder öffnen,
 * eine Benachrichtigung (Panel + **E-Mail**) bekommen, wenn das Team antwortet – die E-Mail kann **jeder Benutzer selbst an- oder ausschalten** (Häkchen unten auf der Support-Seite, Standard: an).
 
@@ -82,6 +82,19 @@ Gut zu wissen:
   Mail mit kurzem Auszug und Link. Ist Mail nicht eingerichtet oder schlägt der Versand fehl, funktionieren Tickets normal
   (der Fehler wird nur protokolliert). Jeder (Kunden und Team) kann E-Mails für sich auf der Support-Seite ausschalten;
   die Panel-Benachrichtigung bleibt.
+
+## Anhänge
+
+Tickets und Antworten können bis zu **3 Dateien** enthalten (je max. **5 MB**, max. 30 pro Ticket): Screenshots (PNG, JPG, GIF, WebP)
+und Textdateien (`.txt`, `.log`).
+
+* Der Typ wird am **Inhalt** erkannt, nicht am Namen (eine zu `.png` umbenannte `.exe` wird abgelehnt; der gespeicherte Name ist zufällig).
+* Die Dateien liegen **außerhalb des Web-Verzeichnisses** in `storage/app/team-roles/tickets/` und werden nur über die API des Panels
+  an Personen ausgeliefert, die das Ticket sehen dürfen (sonst 404). Downloads kommen immer als Download mit `nosniff`
+  und einer abschottenden `Content-Security-Policy`.
+* Beim Löschen eines Tickets werden die Dateien mitgelöscht; `drop-tables` des Deinstallers entfernt den Ordner ebenfalls.
+* PHP-Grenzen (`upload_max_filesize`, `post_max_size`, bei nginx `client_max_body_size`) müssen mindestens 15 MB pro Anfrage
+  erlauben, sonst wird der Upload mit einem Hinweis abgelehnt.
 
 ## Im Panel nicht sichtbar? Diagnose
 
@@ -264,7 +277,7 @@ Was das Skript sicherstellt:
 * Aktualisiert wird per `p:extension:install` über die vorhandene Version. **Es wird nie `p:extension:remove`
   benutzt** — sonst fiele die Rechteprüfung weg und Moderatoren wären kurzzeitig Voll-Admins. Schlägt die
   Installation fehl, stellt das Panel die alte Version selbst wieder her.
-* Datenbank-Migrationen einer neuen Version laufen automatisch (Version 1.1.0 legt die Ticket-Tabellen an, Version 1.2.0 die Tabelle für die E-Mail-Einstellung). Führt das
+* Datenbank-Migrationen einer neuen Version laufen automatisch (Version 1.1.0 legt die Ticket-Tabellen an, Version 1.2.0 die Tabelle für die E-Mail-Einstellung, Version 1.3.0 die Anhänge-Tabelle). Führt das
   Panel die neue Migration beim Update nicht aus, legt die Extension die Ticket-Tabellen bei der ersten Nutzung selbst an.
   Ein Rollback dreht sie **nicht** zurück — mach vor einem Update ein Datenbank-Backup.
 
@@ -320,6 +333,7 @@ ein Konsolen-Admin ohne Rolle wird automatisch Owner.
   immer Owner-only, Rang-Regel, Admin-Flag-Schutz, Client-API-Regeln, Ticket-Rechte geben nie Admin-Zugang
 * **Ticket-Regeln** (wer sehen/antworten/verwalten darf, Validierung, Status, „ungelesen“): 66 Prüfungen (`tests/ticket_rules_test.php`)
 * **Ticket-Datenbanklogik** gegen einen SQLite-Ersatz für den Laravel-Query-Builder: 39 Prüfungen (`tests/ticket_service_test.php`)
+* **Ticket-Anhänge** (Inhaltserkennung, Namen, Grenzen): 29 Prüfungen (`tests/ticket_files_test.php`)
 * **Ticket-E-Mails** (Empfänger, Texte, Schutz vor Header-Injection, Mailfehler brechen nie Tickets): 28 Prüfungen (`tests/ticket_mail_test.php`) — mit Fake-Mailer, **es wurde keine echte E-Mail verschickt**
 * **Oberfläche** mit simuliertem React/SDK und Fake-Backend: 78 Prüfungen (`tests/ui/run.mjs`) — Kunde erstellt Ticket
   mit Priorität, Team antwortet, Benachrichtigungen, Sprachwechsel EN/DE, Rechte-Editor, Manifest ↔ Screens/Slots

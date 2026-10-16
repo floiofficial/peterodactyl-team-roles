@@ -50,7 +50,7 @@ ok('support screen is an account screen', manifest.ui.screens.find(s => s.id ===
 const adminNav = manifest.ui.screens.filter(s => s.area === 'admin' && !s.parent && s.nav).map(s => s.id);
 ok('Team management and Support tickets are own admin categories', adminNav.includes('team') && adminNav.includes('tickets'));
 ok('support tickets admin category is registered', typeof screens.tickets === 'function');
-ok('manifest version 1.2.0', manifest.version === '1.2.0');
+ok('manifest version 1.3.0', manifest.version === '1.3.0');
 ok('manifest all English', !/[äöüß]|Rollen|Freund|Kunde/.test(JSON.stringify(manifest)));
 
 // ---- dictionaries
@@ -145,6 +145,49 @@ await mountScreen(Support);
     ok('checkbox now unchecked + toast', find(R.tree(), e => e.tag === 'input' && e.props.type === 'checkbox')[0].props.checked === false && globalThis.__toasts.some(x => x[1] === 'E-mail notifications are off.'));
     await find(R.tree(), e => e.tag === 'input' && e.props.type === 'checkbox')[0].props.onChange({ target: { checked: true } }); await R.settle();
     ok('switching on again', be.mail === true && globalThis.__toasts.some(x => x[1] === 'E-mail notifications are on.'));
+}
+
+// attachments
+reset(); seed(); asCustomer();
+const mkFile = (name, size) => new File([new Uint8Array(size)], name);
+globalThis.__clicks = []; globalThis.__revoked = [];
+globalThis.URL.createObjectURL = () => 'blob:fake';
+globalThis.URL.revokeObjectURL = (u) => globalThis.__revoked.push(u);
+globalThis.document.createElement = () => ({ click() { globalThis.__clicks.push(this.download); }, remove() {} });
+globalThis.document.body = { appendChild() {} };
+window.location.search = '?new=1';
+await mountScreen(Support);
+window.location.search = '';
+{
+    ok('new ticket form shows the attachment picker + limits', T().includes('Attachments (optional)') && T().includes('Up to 3 files, 5 MB each.'));
+    const picker = () => find(R.tree(), e => e.tag === 'input' && e.props.type === 'file')[0];
+    ok('file input accepts images and text only', picker() && /image\/png/.test(picker().props.accept) && /\.log/.test(picker().props.accept) && picker().props.multiple === true);
+    await picker().props.onChange({ target: { files: [mkFile('shot.png', 2048)], value: 'x' } }); await R.settle();
+    ok('chosen file listed with size and remove button', T().includes('shot.png (2 KB)') && !!byText('button', 'Remove'));
+    await picker().props.onChange({ target: { files: [mkFile('huge.png', 6 * 1048576)], value: 'x' } }); await R.settle();
+    ok('file over 5 MB refused with a toast', !T().includes('huge.png (') && globalThis.__toasts.some(x => x[0] === 'err' && x[1].includes('"huge.png" is larger than 5 MB')));
+    await picker().props.onChange({ target: { files: [mkFile('a.log', 10), mkFile('b.log', 10), mkFile('c.log', 10)], value: 'x' } }); await R.settle();
+    ok('more than 3 files refused', globalThis.__toasts.some(x => x[1] === 'You can attach at most 3 files.') && !T().includes('a.log ('));
+    await click(byText('button', 'Remove'));
+    ok('remove drops the file', !T().includes('shot.png (2 KB)'));
+    await picker().props.onChange({ target: { files: [mkFile('shot.png', 2048)], value: 'x' } }); await R.settle();
+    await type(byPh('Short summary of the problem'), 'Picture attached');
+    await type(byPh('Describe the problem in as much detail as you can…'), 'See the attached screenshot please.');
+    await submit(find(R.tree(), e => e.tag === 'form')[0]);
+    const post = be.calls.filter(c => c[0] === 'POST' && c[1].endsWith('/tickets')).pop();
+    ok('with a file the request is multipart (FormData) with files[]', post[2] instanceof FormData && post[2].getAll('files[]').length === 1 && post[2].get('subject') === 'Picture attached' && post[2].get('priority') === 'normal');
+    ok('ticket opens and shows the attachment', T().includes('Attachments:') && T().includes('shot.png (2 KB)'));
+    await click(byText('button', 'shot.png (2 KB)'));
+    const dl = be.calls.filter(c => c[0] === 'GET' && /attachments\/100$/.test(c[1])).pop();
+    ok('download asks the attachment endpoint as blob and saves under the file name', dl && be.lastCfg.responseType === 'blob' && globalThis.__clicks.includes('shot.png'));
+    // reply with a file
+    const rp = find(R.tree(), e => e.tag === 'input' && e.props.type === 'file')[0];
+    await rp.props.onChange({ target: { files: [mkFile('server.log', 300)], value: 'x' } }); await R.settle();
+    await type(find(R.tree(), e => e.tag === 'textarea')[0], 'Here is the log');
+    await submit(find(R.tree(), e => e.tag === 'form')[0]);
+    const rpost = be.calls.filter(c => c[0] === 'POST' && c[1].endsWith('/messages')).pop();
+    ok('reply with file is multipart', rpost[2] instanceof FormData && rpost[2].get('body') === 'Here is the log' && rpost[2].getAll('files[]').length === 1);
+    ok('reply shows its attachment and the picker is cleared', T().includes('server.log (1 KB)') && !T().includes('server.log (1 KB)\nRemove'));
 }
 
 // panel locale default

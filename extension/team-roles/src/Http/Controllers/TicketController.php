@@ -9,9 +9,14 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
+use Throwable;
 use TeamRoles\Services\TeamService;
 use TeamRoles\Services\TicketMailer;
 use TeamRoles\Services\TicketService;
+use TeamRoles\Support\TicketFiles;
 use TeamRoles\Support\TicketRules;
 
 /**
@@ -98,11 +103,14 @@ final class TicketController extends Controller
             throw ValidationException::withMessages(array_map(static fn (string $m): array => [$m], $check['errors']));
         }
 
+        $files = $this->incomingFiles($request, 0);
+
         try {
             $ticket = $this->tickets->create((int) $request->user()->id, $check['clean']);
         } catch (DomainException $e) {
             throw ValidationException::withMessages(['subject' => [$e->getMessage()]]);
         }
+        $this->saveFiles((int) $ticket['id'], null, (int) $request->user()->id, $files);
 
         $this->mailer->newTicket($ticket, $this->tickets->username((int) $request->user()->id));
 
@@ -136,8 +144,11 @@ final class TicketController extends Controller
             throw ValidationException::withMessages(['body' => [$check['error']]]);
         }
 
+        $files = $this->incomingFiles($request, $this->tickets->attachmentCount($ticket));
+
         $isStaff = ! TicketRules::isAuthor($row, $userId);
-        $this->tickets->addReply($row, $userId, $check['body'], $isStaff);
+        $messageId = $this->tickets->addReply($row, $userId, $check['body'], $isStaff);
+        $this->saveFiles($ticket, $messageId, $userId, $files);
         $this->mailer->reply($row, $userId, $this->tickets->username($userId), $check['body']);
 
         return $this->fresh($ticket, $role, $userId, 201);
@@ -176,12 +187,139 @@ final class TicketController extends Controller
         [$role] = $this->context($request, $ticket);
         abort_unless(TicketRules::canDelete($role), 403, 'You are not allowed to delete tickets.');
 
+        $stored = $this->tickets->attachmentFiles($ticket);
         $this->tickets->delete($ticket);
+        $this->removeFiles($ticket, $stored);
 
         return new JsonResponse(null, 204);
     }
 
+    /** GET /tickets/{ticket}/attachments/{attachment} - only for people who may see the ticket */
+    public function download(Request $request, int $ticket, int $attachment): BinaryFileResponse
+    {
+        $this->context($request, $ticket);
+        $row = $this->tickets->findAttachment($ticket, $attachment);
+        abort_if($row === null, 404, 'File not found.');
+        $path = $this->fileDir($ticket) . '/' . basename((string) $row['stored']);
+        abort_unless(is_file($path), 404, 'File not found.');
+
+        $name = (string) $row['name'];
+        $response = new BinaryFileResponse($path, 200, [
+            'Content-Type' => TicketFiles::mimeFor((string) $row['kind']),
+            'X-Content-Type-Options' => 'nosniff',
+            'Content-Security-Policy' => "default-src 'none'; sandbox",
+            'Cache-Control' => 'private, max-age=0, must-revalidate',
+        ]);
+        $response->setContentDisposition(ResponseHeaderBag::DISPOSITION_ATTACHMENT, $name, (string) preg_replace('/[^\x20-\x7E]|[%\\\/"]/', '_', $name));
+
+        return $response;
+    }
+
     // ------------------------------------------------------------------ internals
+
+    private function fileDir(int $ticket): string
+    {
+        return rtrim(storage_path('app/team-roles/tickets'), '/') . '/' . $ticket;
+    }
+
+    /**
+     * Check the uploaded files BEFORE anything is saved (all or nothing).
+     *
+     * @return list<array{content: string, meta: array<string, mixed>}>
+     */
+    private function incomingFiles(Request $request, int $already): array
+    {
+        $uploads = $request->file('files');
+        if ($uploads === null) {
+            return [];
+        }
+        $uploads = array_values(array_filter(is_array($uploads) ? $uploads : [$uploads]));
+        if ($uploads === []) {
+            return [];
+        }
+
+        $errors = [];
+        if (count($uploads) > TicketFiles::MAX_FILES_PER_MESSAGE) {
+            $errors[] = 'You can attach at most ' . TicketFiles::MAX_FILES_PER_MESSAGE . ' files per message.';
+        }
+        if ($already + count($uploads) > TicketFiles::MAX_FILES_PER_TICKET) {
+            $errors[] = 'This ticket has too many attachments already.';
+        }
+
+        $ready = [];
+        if ($errors === []) {
+            foreach ($uploads as $file) {
+                $name = $file instanceof UploadedFile ? TicketFiles::cleanName($file->getClientOriginalName()) : 'file';
+                if (! $file instanceof UploadedFile || ! $file->isValid() || $file->getRealPath() === false) {
+                    $errors[] = $name . ': the upload failed (the file may be larger than the server allows).';
+                    continue;
+                }
+                $size = $file->getSize();
+                if ($size === false || $size > TicketFiles::MAX_BYTES) {
+                    $errors[] = $name . ': the file is larger than ' . (TicketFiles::MAX_BYTES / 1048576) . ' MB.';
+                    continue;
+                }
+                $content = (string) file_get_contents($file->getRealPath());
+                $meta = TicketFiles::inspect($content, $file->getClientOriginalName());
+                if (! $meta['ok']) {
+                    $errors[] = (string) $meta['error'];
+                    continue;
+                }
+                $ready[] = ['content' => $content, 'meta' => $meta];
+            }
+        }
+        if ($errors !== []) {
+            throw ValidationException::withMessages(['files' => $errors]);
+        }
+
+        return $ready;
+    }
+
+    /**
+     * Save checked files. A disk problem must not undo the ticket/reply that was already created.
+     *
+     * @param list<array{content: string, meta: array<string, mixed>}> $files
+     */
+    private function saveFiles(int $ticket, ?int $messageId, int $userId, array $files): void
+    {
+        if ($files === []) {
+            return;
+        }
+        try {
+            $dir = $this->fileDir($ticket);
+            if (! is_dir($dir) && ! mkdir($dir, 0750, true) && ! is_dir($dir)) {
+                throw new \RuntimeException('cannot create ' . $dir);
+            }
+            foreach ($files as $f) {
+                $stored = TicketFiles::storageName((string) $f['meta']['ext']);
+                if (file_put_contents($dir . '/' . $stored, $f['content']) === false) {
+                    throw new \RuntimeException('cannot write attachment');
+                }
+                $this->tickets->addAttachment($ticket, $messageId, $userId, [
+                    'name' => (string) $f['meta']['name'],
+                    'kind' => (string) $f['meta']['kind'],
+                    'size' => (int) $f['meta']['size'],
+                    'stored' => $stored,
+                ]);
+            }
+        } catch (Throwable $e) {
+            try {
+                logger()->warning('team-roles: saving a ticket attachment failed: ' . $e->getMessage());
+            } catch (Throwable) {
+                // logging must not fail either
+            }
+        }
+    }
+
+    /** @param list<string> $stored */
+    private function removeFiles(int $ticket, array $stored): void
+    {
+        $dir = $this->fileDir($ticket);
+        foreach ($stored as $name) {
+            @unlink($dir . '/' . basename($name));
+        }
+        @rmdir($dir);
+    }
 
     /** @return array{0: array<string, mixed>, 1: int, 2: array<string, mixed>} role, user id, ticket */
     private function context(Request $request, int $ticket): array
@@ -213,6 +351,7 @@ final class TicketController extends Controller
             'author' => ['id' => $row['user_id'], 'username' => $this->tickets->username((int) $row['user_id'])],
             'created_at' => $this->iso($row['created_at'] ?? null),
             'updated_at' => $this->iso($row['last_activity_at'] ?? $row['updated_at'] ?? null),
+            'attachments' => $this->tickets->ticketAttachments((int) $row['id']),
             'can' => TicketRules::ticketAbilities($role, $row, $userId),
         ];
     }

@@ -17,5 +17,6 @@ Route::get('/tickets', [TicketController::class, 'index']);
 Route::post('/tickets', [TicketController::class, 'store'])->middleware('throttle:10,1');
 Route::get('/tickets/{ticket}', [TicketController::class, 'show'])->whereNumber('ticket');
 Route::post('/tickets/{ticket}/messages', [TicketController::class, 'reply'])->whereNumber('ticket')->middleware('throttle:30,1');
+Route::get('/tickets/{ticket}/attachments/{attachment}', [TicketController::class, 'download'])->whereNumber('ticket')->whereNumber('attachment');
 Route::put('/tickets/{ticket}', [TicketController::class, 'update'])->whereNumber('ticket');
 Route::delete('/tickets/{ticket}', [TicketController::class, 'destroy'])->whereNumber('ticket');

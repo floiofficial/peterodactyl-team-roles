@@ -20,6 +20,7 @@ final class TicketService
     public const MESSAGES = 'ext_team_roles_ticket_messages';
     public const READS = 'ext_team_roles_ticket_reads';
     public const PREFS = 'ext_team_roles_ticket_prefs';
+    public const FILES = 'ext_team_roles_ticket_attachments';
 
     /** Max. tickets scanned for the notification counter. */
     private const SUMMARY_LIMIT = 1000;
@@ -52,6 +53,10 @@ final class TicketService
         }
         if (! $schema->hasTable(self::PREFS)) {
             $migration = require $dir . '2026_10_17_000000_create_ext_team_roles_ticket_prefs.php';
+            $migration->up();
+        }
+        if (! $schema->hasTable(self::FILES)) {
+            $migration = require $dir . '2026_10_18_000000_create_ext_team_roles_ticket_attachments.php';
             $migration->up();
         }
         self::$tablesChecked = true;
@@ -194,10 +199,80 @@ final class TicketService
             $out[] = $this->asArray($row);
         }
         $names = $this->usernames(array_column($out, 'user_id'));
+        $files = $this->attachmentsGrouped($ticketId);
         foreach ($out as &$m) {
             $m['author'] = ['id' => $m['user_id'], 'username' => $names[$m['user_id']] ?? '#' . $m['user_id']];
+            $m['attachments'] = $files[$m['id']] ?? [];
         }
         unset($m);
+
+        return $out;
+    }
+
+    /** Attachments of the ticket itself (the first message). @return list<array<string, mixed>> */
+    public function ticketAttachments(int $ticketId): array
+    {
+        return $this->attachmentsGrouped($ticketId)[0] ?? [];
+    }
+
+    public function attachmentCount(int $ticketId): int
+    {
+        return (int) $this->db->table(self::FILES)->where('ticket_id', $ticketId)->count();
+    }
+
+    /** @param array{name: string, kind: string, size: int, stored: string} $meta */
+    public function addAttachment(int $ticketId, ?int $messageId, int $userId, array $meta): int
+    {
+        $now = $this->now();
+
+        return (int) $this->db->table(self::FILES)->insertGetId([
+            'ticket_id' => $ticketId,
+            'message_id' => $messageId,
+            'user_id' => $userId,
+            'name' => $meta['name'],
+            'kind' => $meta['kind'],
+            'size' => $meta['size'],
+            'stored' => $meta['stored'],
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+    }
+
+    /** @return array<string, mixed>|null a row incl. 'stored' (never sent to the browser) */
+    public function findAttachment(int $ticketId, int $attachmentId): ?array
+    {
+        $row = $this->db->table(self::FILES)->where('id', $attachmentId)->where('ticket_id', $ticketId)->first();
+
+        return $row === null ? null : $this->asArray($row);
+    }
+
+    /** @return list<string> stored file names of the ticket (to delete them from disk) */
+    public function attachmentFiles(int $ticketId): array
+    {
+        $out = [];
+        foreach ($this->db->table(self::FILES)->where('ticket_id', $ticketId)->get(['stored']) as $row) {
+            $out[] = (string) $row->stored;
+        }
+
+        return $out;
+    }
+
+    /**
+     * message id (0 = the ticket itself) => list of public attachment info
+     *
+     * @return array<int, list<array<string, mixed>>>
+     */
+    private function attachmentsGrouped(int $ticketId): array
+    {
+        $out = [];
+        foreach ($this->db->table(self::FILES)->where('ticket_id', $ticketId)->orderBy('id', 'asc')->get(['id', 'message_id', 'name', 'kind', 'size']) as $row) {
+            $out[(int) ($row->message_id ?? 0)][] = [
+                'id' => (int) $row->id,
+                'name' => (string) $row->name,
+                'kind' => (string) $row->kind,
+                'size' => (int) $row->size,
+            ];
+        }
 
         return $out;
     }
@@ -207,14 +282,15 @@ final class TicketService
         return $this->usernames([$userId])[$userId] ?? '#' . $userId;
     }
 
-    public function addReply(array $ticket, int $userId, string $body, bool $isStaff): void
+    public function addReply(array $ticket, int $userId, string $body, bool $isStaff): int
     {
         $now = $this->now();
         $isAuthor = TicketRules::isAuthor($ticket, $userId);
         $newStatus = TicketRules::statusAfterReply((string) $ticket['status'], $isAuthor);
 
-        $this->db->transaction(function () use ($ticket, $userId, $body, $isStaff, $now, $newStatus): void {
-            $this->db->table(self::MESSAGES)->insert([
+        $messageId = 0;
+        $this->db->transaction(function () use ($ticket, $userId, $body, $isStaff, $now, $newStatus, &$messageId): void {
+            $messageId = (int) $this->db->table(self::MESSAGES)->insertGetId([
                 'ticket_id' => $ticket['id'],
                 'user_id' => $userId,
                 'body' => $body,
@@ -225,6 +301,8 @@ final class TicketService
             $this->bump((int) $ticket['id'], $userId, ['status' => $newStatus]);
         });
         $this->markRead((int) $ticket['id'], $userId);
+
+        return $messageId;
     }
 
     public function setStatus(int $ticketId, int $actorId, string $status): void
@@ -244,6 +322,7 @@ final class TicketService
         $this->db->transaction(function () use ($ticketId): void {
             $this->db->table(self::MESSAGES)->where('ticket_id', $ticketId)->delete();
             $this->db->table(self::READS)->where('ticket_id', $ticketId)->delete();
+            $this->db->table(self::FILES)->where('ticket_id', $ticketId)->delete();
             $this->db->table(self::TICKETS)->where('id', $ticketId)->delete();
         });
     }
@@ -364,7 +443,7 @@ final class TicketService
     private function asArray(object $row): array
     {
         $a = (array) $row;
-        foreach (['id', 'user_id', 'ticket_id', 'activity_seq', 'last_actor_id'] as $int) {
+        foreach (['id', 'user_id', 'ticket_id', 'message_id', 'size', 'activity_seq', 'last_actor_id'] as $int) {
             if (array_key_exists($int, $a) && $a[$int] !== null) {
                 $a[$int] = (int) $a[$int];
             }

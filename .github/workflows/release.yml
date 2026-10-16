@@ -53,6 +53,9 @@ jobs:
       - name: Test ticket e-mails
         run: php tests/ticket_mail_test.php
 
+      - name: Test ticket attachments
+        run: php tests/ticket_files_test.php
+
       - name: Check shell scripts
         run: |
           set -e

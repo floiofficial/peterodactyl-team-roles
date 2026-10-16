@@ -37,6 +37,7 @@ $pdo->exec('CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT)');
 $pdo->exec('CREATE TABLE ext_team_roles_tickets (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, subject TEXT, description TEXT, priority TEXT DEFAULT "normal", status TEXT DEFAULT "open", activity_seq INT DEFAULT 1, last_actor_id INT, last_activity_at TEXT, created_at TEXT, updated_at TEXT)');
 $pdo->exec('CREATE TABLE ext_team_roles_ticket_messages (id INTEGER PRIMARY KEY AUTOINCREMENT, ticket_id INT, user_id INT, body TEXT, is_staff INT DEFAULT 0, created_at TEXT, updated_at TEXT)');
 $pdo->exec('CREATE TABLE ext_team_roles_ticket_reads (id INTEGER PRIMARY KEY AUTOINCREMENT, ticket_id INT, user_id INT, seen_seq INT DEFAULT 0, created_at TEXT, updated_at TEXT, UNIQUE(ticket_id, user_id))');
+$pdo->exec('CREATE TABLE ext_team_roles_ticket_attachments (id INTEGER PRIMARY KEY AUTOINCREMENT, ticket_id INT, message_id INT, user_id INT, name TEXT, kind TEXT, size INT, stored TEXT, created_at TEXT, updated_at TEXT)');
 $pdo->exec('CREATE TABLE ext_team_roles_ticket_prefs (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT UNIQUE, email_notifications INT DEFAULT 1, created_at TEXT, updated_at TEXT)');
 foreach ([[1, 'floi'], [2, 'friend1'], [3, 'mod1'], [4, 'customer1'], [5, 'customer2']] as $u) {
     $pdo->prepare('INSERT INTO users VALUES (?, ?)')->execute($u);
@@ -154,6 +155,22 @@ check('mail switched on again', $svc->mailEnabled(4) === true && $svc->mailDisab
 $svc->setMailEnabled(2, false);
 check('staff can opt out too', $svc->mailDisabledIds([2, 3, 4]) === [2]);
 check('empty list', $svc->mailDisabledIds([]) === []);
+
+// --- attachments
+$t9 = $svc->create(5, $new('Screenshot attached'));
+$a1 = $svc->addAttachment($t9['id'], null, 5, ['name' => 'shot.png', 'kind' => 'png', 'size' => 1234, 'stored' => 'aaaa.png']);
+$mid = $svc->addReply($svc->find($t9['id']), 2, 'Thanks, see log', true);
+check('addReply returns the new message id', $mid > 0);
+$a2 = $svc->addAttachment($t9['id'], $mid, 2, ['name' => 'server.log', 'kind' => 'txt', 'size' => 99, 'stored' => 'bbbb.txt']);
+check('ticket attachments = the ones without a message', count($svc->ticketAttachments($t9['id'])) === 1 && $svc->ticketAttachments($t9['id'])[0]['name'] === 'shot.png');
+$msgs = $svc->messages($t9['id']);
+check('message carries its own attachments', count($msgs) === 1 && count($msgs[0]['attachments']) === 1 && $msgs[0]['attachments'][0]['id'] === $a2 && $msgs[0]['attachments'][0]['size'] === 99);
+check('stored file name is never exposed in the lists', ! array_key_exists('stored', $msgs[0]['attachments'][0]) && ! array_key_exists('stored', $svc->ticketAttachments($t9['id'])[0]));
+check('attachment count', $svc->attachmentCount($t9['id']) === 2 && $svc->attachmentCount(1) === 0);
+check('find attachment only inside its own ticket', $svc->findAttachment($t9['id'], $a1)['stored'] === 'aaaa.png' && $svc->findAttachment(1, $a1) === null && $svc->findAttachment($t9['id'], 999) === null);
+check('stored names of ticket', $svc->attachmentFiles($t9['id']) === ['aaaa.png', 'bbbb.txt']);
+$svc->delete($t9['id']);
+check('deleting a ticket removes its attachment rows', $svc->attachmentCount($t9['id']) === 0 && (int) $pdo->query('SELECT COUNT(*) FROM ext_team_roles_ticket_attachments')->fetchColumn() === 0);
 
 echo "\n" . ($failed === 0 ? "OK: $total checks, 0 failed\n" : "$failed of $total checks FAILED\n");
 exit($failed === 0 ? 0 : 1);

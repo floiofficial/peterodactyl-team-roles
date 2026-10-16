@@ -50,7 +50,7 @@ panel and **which e-mail address becomes Owner**. Please read "Read this first" 
 
 **Everyone** (also a plain User / Customer) can:
 
-* create a ticket: **subject**, **"What is the problem?"** field and a **priority** (Low · Normal · High · Urgent),
+* create a ticket: **subject**, **"What is the problem?"** field and a **priority** (Low · Normal · High · Urgent), optionally with **attachments** (screenshots / text files),
 * see **their own** tickets, write follow-up messages, close and re-open them,
 * get a notification (panel + **e-mail**) when the team replies - the e-mail can be **switched on or off by each user** (checkbox at the bottom of the Support page, default: on).
 
@@ -80,6 +80,19 @@ Rules worth knowing:
   ticket or a customer reply, and to the customer when the team replies; one separate mail per person with a short excerpt
   and a link. Everybody (customers and staff) can switch e-mails off for themselves on the Support page; the panel
   notification stays. If mail is not configured or sending fails, tickets work as usual (the failure is only logged).
+
+## Attachments
+
+Tickets and replies can carry up to **3 files** (max. **5 MB** each, max. 30 per ticket): screenshots (PNG, JPG, GIF, WebP) and
+text files (`.txt`, `.log`).
+
+* The type is decided by the **content**, not by the name (an `.exe` renamed to `.png` is refused; the stored name is random).
+* Files are stored **outside the web root** in `storage/app/team-roles/tickets/` and are only delivered through the panel's API
+  to people who may see that ticket (everything else answers 404). Downloads are always sent as a download with
+  `nosniff` and a sandboxing `Content-Security-Policy`.
+* Deleting a ticket deletes its files; the uninstaller's `drop-tables` also removes the folder.
+* PHP limits (`upload_max_filesize`, `post_max_size`, and nginx `client_max_body_size`) must allow at least 15 MB per request
+  or the upload is refused with a hint.
 
 ## Not visible in the panel? Diagnose
 
@@ -227,7 +240,7 @@ What the script guarantees:
 * The installed version is backed up to `backups/` first (for `--rollback`).
 * Updating uses `p:extension:install` over the existing version. **`p:extension:remove` is never used** – otherwise
   the permission check would disappear and Moderators would briefly be full admins.
-* Database migrations of a new version run automatically (version 1.1.0 adds the ticket tables, version 1.2.0 the e-mail setting table). If the panel does not run
+* Database migrations of a new version run automatically (version 1.1.0 adds the ticket tables, version 1.2.0 the e-mail setting table, version 1.3.0 the attachments table). If the panel does not run
   the new migration during an update, the extension creates the ticket tables itself on first use. A rollback does
   **not** revert them – take a database backup before updating.
 
@@ -275,6 +288,7 @@ php tools/team-tool.php /var/www/pterodactyl demote-staff
 * **Permission logic:** 46 checks (`tests/policy_test.php`)
 * **Ticket rules** (who may see/reply/manage, validation, status, "unread"): 66 checks (`tests/ticket_rules_test.php`)
 * **Ticket database logic** on an SQLite stand-in for Laravel's query builder: 39 checks (`tests/ticket_service_test.php`)
+* **Ticket attachments** (content sniffing, names, limits): 29 checks (`tests/ticket_files_test.php`)
 * **Ticket e-mails** (recipients, texts, header-injection safety, mail failures never break tickets): 28 checks (`tests/ticket_mail_test.php`) – with a fake mailer, **no real e-mail was sent**
 * **User interface** with a simulated React/SDK and a fake backend: 78 checks (`tests/ui/run.mjs`) – customer creates a
   ticket with priority, team replies, notifications, language switch EN/DE, rights editor, matching of manifest
