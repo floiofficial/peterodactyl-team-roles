@@ -109,7 +109,7 @@ Folgen:
 Sobald das Repo auf GitHub liegt und ein Release existiert, reicht auf dem Server **ein Befehl** (als root):
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/floiofficial/pterodactyl-team-roles/main/setup.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/floiofficial/peterodactyl-team-roles/main/setup.sh)
 ```
 
 Es erscheint ein Menü:
@@ -146,7 +146,7 @@ automatisch ein Release (Zip + SHA-256-Prüfsumme). Auf dem Server holt `update.
 ```bash
 git init -b main        # im Zip ist kein .git-Ordner enthalten, daher einmalig anlegen
 git add . && git commit -m "Teamverwaltung 1.0.0"
-git remote add origin https://github.com/DEIN-NAME/pterodactyl-team-roles.git
+git remote add origin https://github.com/floiofficial/peterodactyl-team-roles.git
 git push -u origin main
 ```
 
@@ -165,7 +165,7 @@ einem **öffentlichen** Repo. Ein **privates** Repo ist für dieses Projekt die 
 
 ```bash
 # erstes Mal (merkt sich das Repo in .update-repo)
-sudo bash update.sh /var/www/pterodactyl --repo DEIN-NAME/pterodactyl-team-roles
+sudo bash update.sh /var/www/pterodactyl --repo floiofficial/peterodactyl-team-roles
 # danach reicht
 sudo bash update.sh /var/www/pterodactyl
 # privates Repo: vorher einen Token mit Lesezugriff auf „Contents“ setzen

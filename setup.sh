@@ -3,14 +3,14 @@
 # von floiofficial
 #
 # Ein Befehl per SSH (als root):
-#   bash <(curl -fsSL https://raw.githubusercontent.com/floiofficial/pterodactyl-team-roles/main/setup.sh)
+#   bash <(curl -fsSL https://raw.githubusercontent.com/floiofficial/peterodactyl-team-roles/main/setup.sh)
 #
 # Das Skript laedt das neueste GitHub-Release, prueft die SHA-256-Pruefsumme und legt es unter
 # /opt/floiofficial-teamverwaltung ab. Danach laufen install.sh / uninstall.sh / update.sh von dort.
 # Deinstallieren funktioniert auch ohne Internet, sobald die Dateien einmal dort liegen.
 set -Eeuo pipefail
 
-REPO="${TEAMROLES_REPO:-floiofficial/pterodactyl-team-roles}"
+REPO="${TEAMROLES_REPO:-floiofficial/peterodactyl-team-roles}"
 API_BASE="${TEAMROLES_API_BASE:-https://api.github.com}"
 HOME_DIR="${TEAMROLES_HOME:-/opt/floiofficial-teamverwaltung}"
 PANEL_DIR="${PANEL_DIR:-/var/www/pterodactyl}"

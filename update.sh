@@ -6,7 +6,7 @@
 #   sudo bash update.sh [PANEL_VERZEICHNIS] [--repo OWNER/REPO] [--version vX.Y.Z]
 #                       [--yes] [--force] [--rollback] [--ext-dir DIR] [--web-user www-data]
 #
-# Erstes Mal:  sudo bash update.sh /var/www/pterodactyl --repo DEIN-NAME/pterodactyl-team-roles
+# Erstes Mal:  sudo bash update.sh /var/www/pterodactyl --repo floiofficial/peterodactyl-team-roles
 #              (das Repo wird in .update-repo gemerkt, danach reicht "sudo bash update.sh")
 # Privates Repo: vorher  export GITHUB_TOKEN=...  (Token mit Lesezugriff auf Contents)
 # Zurueck zur vorherigen Version:  sudo bash update.sh --rollback
@@ -115,7 +115,7 @@ command -v sha256sum >/dev/null || die "sha256sum nicht gefunden."
 if [ -z "$REPO" ] && [ -f "$SCRIPT_DIR/.update-repo" ]; then
     REPO="$(tr -d '[:space:]' < "$SCRIPT_DIR/.update-repo")"
 fi
-[ -n "$REPO" ] || die "Kein Repo angegeben. Beim ersten Mal: bash update.sh --repo DEIN-NAME/pterodactyl-team-roles"
+[ -n "$REPO" ] || die "Kein Repo angegeben. Beim ersten Mal: bash update.sh --repo floiofficial/peterodactyl-team-roles"
 [[ "$REPO" =~ ^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$ ]] || die "Repo '$REPO' ist ungueltig (erwartet OWNER/REPO)."
 if [ -n "$WANT_VERSION" ]; then
     [[ "$WANT_VERSION" =~ ^v[0-9]+(\.[0-9]+){2}([-+][0-9A-Za-z.-]+)?$ ]] || die "Version '$WANT_VERSION' ungueltig (erwartet z. B. v1.1.0)."
