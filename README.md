@@ -104,6 +104,38 @@ Folgen:
 
 ---
 
+## Ein-Befehl-Installer (per SSH)
+
+Sobald das Repo auf GitHub liegt und ein Release existiert, reicht auf dem Server **ein Befehl** (als root):
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/floiofficial/pterodactyl-team-roles/main/setup.sh)
+```
+
+Es erscheint ein Menü:
+
+```
+  1) Installieren
+  2) Deinstallieren
+  3) Aktualisieren
+  0) Beenden
+```
+
+Direktaufruf ohne Menü: `... setup.sh) install`, `... setup.sh) uninstall`, `... setup.sh) update`.
+
+`setup.sh` fragt den Panel-Pfad ab, lädt das neueste Release, prüft die SHA-256-Prüfsumme und legt die
+Dateien unter `/opt/floiofficial-teamverwaltung` ab. Danach laufen `install.sh` / `uninstall.sh` /
+`update.sh` von dort. **Deinstallieren funktioniert auch ohne Internet**, sobald die Dateien einmal dort liegen.
+
+Voraussetzungen: `curl`, `unzip`, `php` (ist auf dem Panel-Server vorhanden). Für den Befehl oben muss das
+Repo **öffentlich** sein (der Code enthält keine Geheimnisse; `backups/` ist ausgeschlossen). Bei einem
+privaten Repo: Release-Zip manuell auf den Server legen oder `GITHUB_TOKEN` setzen und `setup.sh` per
+`git clone` bzw. Download mit Token holen.
+
+> Wer `curl | bash` nutzt, führt Code aus dem Netz aus. Sieh dir `setup.sh` vorher an — es ist kurz.
+
+---
+
 ## Mit GitHub verbinden (Releases + Update per Skript)
 
 Ablauf: Du pflegst den Code in einem GitHub-Repo. Bei einem Versions-Tag baut eine **GitHub Action**
@@ -235,6 +267,7 @@ oder `client.js` — **sag Bescheid** und schick die Fehlermeldung.
 ## Ordner
 
 ```
+setup.sh                        Menü: Installieren / Deinstallieren / Aktualisieren (Ein-Befehl-Installer)
 install.sh · uninstall.sh        Installer / Deinstaller
 update.sh                        Update aus GitHub-Releases (mit Prüfsumme und Rollback)
 .github/workflows/release.yml    Prüfungen + automatisches Release bei Tag vX.Y.Z

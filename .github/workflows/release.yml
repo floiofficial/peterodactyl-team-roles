@@ -43,7 +43,7 @@ jobs:
       - name: Shell-Skripte pruefen
         run: |
           set -e
-          for f in install.sh uninstall.sh update.sh; do bash -n "$f"; done
+          for f in install.sh uninstall.sh update.sh setup.sh; do bash -n "$f"; done
 
       - name: Oberflaeche pruefen (Syntax + Manifest)
         run: |
