@@ -52,7 +52,7 @@ Mehr dazu weiter unten bei „Ein-Befehl-Installer“. Vorher bitte die Hinweise
 
 * ein Ticket erstellen: **Betreff**, Feld **„Was ist das Problem?“** und eine **Priorität** (Niedrig · Normal · Hoch · Dringend),
 * **seine eigenen** Tickets sehen, weiterschreiben, schließen und wieder öffnen,
-* eine Benachrichtigung bekommen, wenn das Team antwortet.
+* eine Benachrichtigung (Panel + **E-Mail**) bekommen, wenn das Team antwortet.
 
 **Team** (Owner, Administrator, Moderator, Freund – je nachdem, was du einstellst) kann zusätzlich, pro Rolle:
 
@@ -62,7 +62,7 @@ Mehr dazu weiter unten bei „Ein-Befehl-Installer“. Vorher bitte die Hinweise
 | Auf Tickets antworten | Antworten schreiben; beim ersten Team-Beitrag wird das Ticket „In Bearbeitung“ |
 | Status & Priorität ändern | Offen · In Bearbeitung · Gelöst · Geschlossen sowie die Priorität |
 | Tickets löschen | Ticket samt Nachrichten endgültig löschen |
-| Benachrichtigt werden | Benachrichtigung bei neuen Tickets und Antworten anderer (**nur zusammen mit „Alle Tickets sehen“**) |
+| Benachrichtigt werden | Panel-Benachrichtigung **und E-Mail** bei neuen Tickets und Antworten anderer (**nur zusammen mit „Alle Tickets sehen“**) |
 
 Einstellen unter **Admin → Users → Team management → Roles & rights → „Support tickets“** (Häkchen unten bei jeder
 Rolle). Standard: Administrator alle fünf; Moderator und Freund: sehen, antworten, benachrichtigt; Benutzer/Kunde: keine
@@ -76,6 +76,10 @@ Gut zu wissen:
 * Der Owner darf immer alles.
 * Spam-Schutz: max. 10 offene Tickets pro Benutzer, Begrenzung für neue Tickets/Nachrichten.
 * Der Benachrichtigungszähler aktualisiert sich alle 60 Sekunden, solange der Browser-Tab sichtbar ist.
+* **E-Mails** nutzen die Mail-Einstellungen des Panels. Sie gehen bei einem neuen Ticket oder einer
+  Kunden-Antwort an die Rollen mit „Benachrichtigt werden“ und an den Kunden, wenn das Team antwortet; je Person eine eigene
+  Mail mit kurzem Auszug und Link. Ist Mail nicht eingerichtet oder schlägt der Versand fehl, funktionieren Tickets normal
+  (der Fehler wird nur protokolliert).
 
 ## Installieren (manuell)
 
@@ -304,6 +308,7 @@ ein Konsolen-Admin ohne Rolle wird automatisch Owner.
   immer Owner-only, Rang-Regel, Admin-Flag-Schutz, Client-API-Regeln, Ticket-Rechte geben nie Admin-Zugang
 * **Ticket-Regeln** (wer sehen/antworten/verwalten darf, Validierung, Status, „ungelesen“): 66 Prüfungen (`tests/ticket_rules_test.php`)
 * **Ticket-Datenbanklogik** gegen einen SQLite-Ersatz für den Laravel-Query-Builder: 39 Prüfungen (`tests/ticket_service_test.php`)
+* **Ticket-E-Mails** (Empfänger, Texte, Schutz vor Header-Injection, Mailfehler brechen nie Tickets): 28 Prüfungen (`tests/ticket_mail_test.php`) — mit Fake-Mailer, **es wurde keine echte E-Mail verschickt**
 * **Oberfläche** mit simuliertem React/SDK und Fake-Backend: 75 Prüfungen (`tests/ui/run.mjs`) — Kunde erstellt Ticket
   mit Priorität, Team antwortet, Benachrichtigungen, Sprachwechsel EN/DE, Rechte-Editor, Manifest ↔ Screens/Slots
 * **Installer/Deinstaller** mit Fake-Panel: Reihenfolge (erst herabstufen, dann entfernen), Abbruch bei

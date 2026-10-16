@@ -229,7 +229,7 @@ const hrefs = find(R.tree(), e => e.tag === 'a').map(a => a.props.href);
 ok('tab links', hrefs.includes('/panel/users') && hrefs.includes('/panel/team') && hrefs.includes('/account/support'));
 ok('active tab marked', find(R.tree(), e => e.tag === 'a' && e.props['aria-current'] === 'page').length === 1);
 ok('health OK text', t.includes('Permission check is active (admin-api). Owners: 1.'));
-ok('ticket rights block with 5 options', ['See all tickets', 'Reply to tickets', 'Change status & priority', 'Delete tickets', 'Get notified (new tickets & replies)'].every(s => t.includes(s)));
+ok('ticket rights block with 5 options', ['See all tickets', 'Reply to tickets', 'Change status & priority', 'Delete tickets', 'Get notified in the panel and by e-mail (new tickets & replies)'].every(s => t.includes(s)));
 ok('role tabs show Moderator (2), no Owner tab', t.includes('Moderator (2)') && t.includes('Friend (1)') && !t.includes('Owner (1)'));
 ok('moderator has admin rights hint', t.includes('gets access to the admin area'));
 // ticket checkboxes preselected

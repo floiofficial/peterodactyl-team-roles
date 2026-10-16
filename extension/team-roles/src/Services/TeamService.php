@@ -9,6 +9,8 @@ use Illuminate\Database\ConnectionInterface;
 use InvalidArgumentException;
 use TeamRoles\Support\Defaults;
 use TeamRoles\Support\PermissionMap;
+use TeamRoles\Support\TicketMail;
+use TeamRoles\Support\TicketRules;
 
 /**
  * Team management - by floiofficial.
@@ -66,6 +68,32 @@ final class TeamService
         $slug = $isRoot ? Defaults::OWNER : Defaults::USER;
 
         return (int) ($this->db->table(self::ROLES)->where('slug', $slug)->value('rank') ?? ($isRoot ? 100 : 10));
+    }
+
+    /**
+     * User ids that get notifications about other people's tickets (panel + e-mail):
+     * roles with "see all tickets" + "get notified"; the Owner always.
+     *
+     * @return list<int>
+     */
+    public function ticketNotifyUserIds(int $limit = TicketMail::MAX_RECIPIENTS): array
+    {
+        $slugs = [];
+        foreach ($this->rolesList() as $role) {
+            if (TicketRules::canNotify($role)) {
+                $slugs[] = $role['slug'];
+            }
+        }
+        if ($slugs === []) {
+            return [];
+        }
+
+        $ids = [];
+        foreach ($this->db->table(self::MEMBERS)->whereIn('role_slug', $slugs)->orderBy('user_id')->limit($limit)->get(['user_id']) as $row) {
+            $ids[] = (int) $row->user_id;
+        }
+
+        return $ids;
     }
 
     /** @return list<array<string, mixed>> */

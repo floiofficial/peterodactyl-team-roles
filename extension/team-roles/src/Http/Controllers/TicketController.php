@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Validation\ValidationException;
 use TeamRoles\Services\TeamService;
+use TeamRoles\Services\TicketMailer;
 use TeamRoles\Services\TicketService;
 use TeamRoles\Support\TicketRules;
 
@@ -24,7 +25,11 @@ final class TicketController extends Controller
 {
     private const PER_PAGE = 20;
 
-    public function __construct(private readonly TeamService $team, private readonly TicketService $tickets)
+    public function __construct(
+        private readonly TeamService $team,
+        private readonly TicketService $tickets,
+        private readonly TicketMailer $mailer,
+    )
     {
         $this->tickets->ensureTables();
     }
@@ -80,6 +85,8 @@ final class TicketController extends Controller
             throw ValidationException::withMessages(['subject' => [$e->getMessage()]]);
         }
 
+        $this->mailer->newTicket($ticket, $this->tickets->username((int) $request->user()->id));
+
         return new JsonResponse($this->present($ticket, $this->team->roleFor($request->user()), (int) $request->user()->id), 201);
     }
 
@@ -112,6 +119,7 @@ final class TicketController extends Controller
 
         $isStaff = ! TicketRules::isAuthor($row, $userId);
         $this->tickets->addReply($row, $userId, $check['body'], $isStaff);
+        $this->mailer->reply($row, $userId, $this->tickets->username($userId), $check['body']);
 
         return $this->fresh($ticket, $role, $userId, 201);
     }

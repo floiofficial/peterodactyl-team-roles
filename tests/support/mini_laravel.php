@@ -47,6 +47,7 @@ namespace MiniLaravel {
         private array $wheres = [];
         private array $binds = [];
         private array $orders = [];
+        private array $groups = [];
         private ?int $limit = null;
         private ?int $offset = null;
 
@@ -56,6 +57,8 @@ namespace MiniLaravel {
 
         public function select(mixed $c): self { $this->cols = is_array($c) ? implode(',', $c) : $c; return $this; }
         public function from(string $t): self { $this->table = $t; return $this; }
+        public function selectRaw(string $sql): self { $this->cols = $sql; return $this; }
+        public function groupBy(string $c): self { $this->groups[] = $c; return $this; }
 
         private function add(string $bool, string $sql, array $bind = []): self
         {
@@ -103,6 +106,7 @@ namespace MiniLaravel {
         public function whereNotIn(string $c, mixed $v): self { [$s, $b] = $this->inSql($c, $v, true); return $this->add('AND', $s, $b); }
         public function whereRaw(string $s, array $b = []): self { return $this->add('AND', $s, $b); }
         public function orderBy(string $c, string $dir = 'asc'): self { $this->orders[] = "$c " . (strtolower($dir) === 'desc' ? 'DESC' : 'ASC'); return $this; }
+        public function orderByDesc(string $c): self { return $this->orderBy($c, 'desc'); }
         public function orderByRaw(string $sql): self { $this->orders[] = $sql; return $this; }
         public function limit(int $n): self { $this->limit = $n; return $this; }
         public function offset(int $n): self { $this->offset = $n; return $this; }
@@ -121,6 +125,9 @@ namespace MiniLaravel {
         {
             [$w, $b] = $this->compileWhere();
             $sql = "SELECT {$this->cols} FROM {$this->table}" . ($w !== '' ? " WHERE $w" : '');
+            if ($this->groups) {
+                $sql .= ' GROUP BY ' . implode(', ', $this->groups);
+            }
             if ($this->orders) {
                 $sql .= ' ORDER BY ' . implode(', ', $this->orders);
             }
@@ -147,6 +154,13 @@ namespace MiniLaravel {
             [$s, $b] = $this->compile();
 
             return new Coll($this->run($s, $b)->fetchAll(\PDO::FETCH_OBJ));
+        }
+
+        public function pluck(string $col): Coll
+        {
+            $rows = $this->get([$col])->all();
+
+            return new Coll(array_map(static fn ($r) => $r->$col, $rows));
         }
 
         public function first(?array $cols = null): ?object

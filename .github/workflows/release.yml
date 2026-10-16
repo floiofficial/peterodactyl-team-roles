@@ -50,6 +50,9 @@ jobs:
       - name: Test ticket database logic (SQLite)
         run: php tests/ticket_service_test.php
 
+      - name: Test ticket e-mails
+        run: php tests/ticket_mail_test.php
+
       - name: Check shell scripts
         run: |
           set -e

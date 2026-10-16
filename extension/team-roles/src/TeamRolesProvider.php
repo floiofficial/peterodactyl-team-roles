@@ -8,6 +8,7 @@ use Illuminate\Routing\Router;
 use Pterodactyl\Extensions\ExtensionProvider;
 use TeamRoles\Http\Middleware\EnforceTeamPermissions;
 use TeamRoles\Services\TeamService;
+use TeamRoles\Services\TicketMailer;
 use TeamRoles\Services\TicketService;
 
 /**
@@ -27,6 +28,7 @@ class TeamRolesProvider extends ExtensionProvider
 
         $this->app->singleton(TeamService::class, static fn () => TeamService::make());
         $this->app->singleton(TicketService::class, static fn () => TicketService::make());
+        $this->app->singleton(TicketMailer::class, static fn () => TicketMailer::make());
     }
 
     public function boot(): void

@@ -51,7 +51,7 @@ panel and **which e-mail address becomes Owner**. Please read "Read this first" 
 
 * create a ticket: **subject**, **"What is the problem?"** field and a **priority** (Low · Normal · High · Urgent),
 * see **their own** tickets, write follow-up messages, close and re-open them,
-* get a notification when the team replies.
+* get a notification (panel + **e-mail**) when the team replies.
 
 **Staff** (Owner, Administrator, Moderator, Friend – whatever you configure) can additionally, per role:
 
@@ -61,7 +61,7 @@ panel and **which e-mail address becomes Owner**. Please read "Read this first" 
 | Reply to tickets | Write answers; the ticket becomes "In progress" on the first team answer |
 | Change status & priority | Open · In progress · Resolved · Closed, and the priority |
 | Delete tickets | Permanently delete a ticket with all its messages |
-| Get notified | Notification for new tickets and replies of other people (**only together with "See all tickets"**) |
+| Get notified | Panel notification **and e-mail** for new tickets and replies of other people (**only together with "See all tickets"**) |
 
 Set these under **Admin → Users → Team management → Roles & rights → "Support tickets"** (checkboxes at the
 bottom of each role). Defaults: Administrator all five; Moderator and Friend: see, reply, notified; User / Customer:
@@ -75,6 +75,9 @@ Rules worth knowing:
 * The Owner always may everything.
 * Spam protection: max. 10 open tickets per user, rate limits on creating tickets/messages.
 * The notification counter refreshes every 60 seconds while the browser tab is visible.
+* **E-mails** use the panel's own mail settings. They go to the roles with "Get notified" on a new
+  ticket or a customer reply, and to the customer when the team replies; one separate mail per person with a short excerpt
+  and a link. If mail is not configured or sending fails, tickets work as usual (the failure is only logged).
 
 ## Install (manual)
 
@@ -260,6 +263,7 @@ php tools/team-tool.php /var/www/pterodactyl demote-staff
 * **Permission logic:** 46 checks (`tests/policy_test.php`)
 * **Ticket rules** (who may see/reply/manage, validation, status, "unread"): 66 checks (`tests/ticket_rules_test.php`)
 * **Ticket database logic** on an SQLite stand-in for Laravel's query builder: 39 checks (`tests/ticket_service_test.php`)
+* **Ticket e-mails** (recipients, texts, header-injection safety, mail failures never break tickets): 28 checks (`tests/ticket_mail_test.php`) – with a fake mailer, **no real e-mail was sent**
 * **User interface** with a simulated React/SDK and a fake backend: 75 checks (`tests/ui/run.mjs`) – customer creates a
   ticket with priority, team replies, notifications, language switch EN/DE, rights editor, matching of manifest
   and registered screens/slots
