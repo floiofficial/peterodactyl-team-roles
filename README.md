@@ -9,6 +9,16 @@ Häkchen-Matrix, was die Person darf.
 Es wird **kein Panel-Code verändert**. Das Ganze ist eine normale Pterodactyl-2.0-**Extension**
 (`team-roles`) und lässt sich jederzeit wieder entfernen.
 
+## 🚀 Installieren – ein Befehl (SSH, als root)
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/floiofficial/peterodactyl-team-roles/main/setup.sh)
+```
+
+Danach erscheint ein Menü: **1) Installieren · 2) Deinstallieren · 3) Aktualisieren · 0) Beenden**.
+Mehr dazu weiter unten bei „Ein-Befehl-Installer“. Vorher bitte die Hinweise unter „Zuerst lesen“ beachten
+(Test-Panel, Datenbank-Backup).
+
 ---
 
 ## ⚠️ Zuerst lesen

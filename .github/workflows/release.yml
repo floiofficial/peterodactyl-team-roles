@@ -93,4 +93,11 @@ jobs:
             "floiofficial-teamverwaltung-${VERSION}.zip" \
             "floiofficial-teamverwaltung-${VERSION}.zip.sha256" \
             --title "Teamverwaltung ${VERSION}" \
+            --notes "Installieren per SSH (als root) - kopieren und einfuegen:
+
+          \`\`\`
+          bash <(curl -fsSL https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/main/setup.sh)
+          \`\`\`
+
+          Menue: 1 Installieren, 2 Deinstallieren, 3 Aktualisieren. von floiofficial" \
             --generate-notes
