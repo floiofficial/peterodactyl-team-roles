@@ -1,7 +1,7 @@
 {
     "id": "team-roles",
     "name": "Teamverwaltung",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Rollen (Owner, Administrator, Moderator, Freund, Kunde) mit einstellbaren Rechten. Von floiofficial.",
     "author": "floiofficial",
     "icon": "shield-check",

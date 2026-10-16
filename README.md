@@ -17,7 +17,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/floiofficial/peterodactyl-te
 
 Danach erscheint ein Menü: **1) Installieren · 2) Deinstallieren · 3) Aktualisieren · 0) Beenden**.
 Mehr dazu weiter unten bei „Ein-Befehl-Installer“. Vorher bitte die Hinweise unter „Zuerst lesen“ beachten
-(Test-Panel, Datenbank-Backup).
+(Test-Panel, Datenbank-Backup). Der Installer fragt dich, **welche E-Mail Owner wird**.
 
 ---
 
@@ -43,10 +43,16 @@ Der Installer prüft alles, zeigt die aktuellen Admins, fragt nach Bestätigung,
 nach `backups/` und installiert + aktiviert die Extension. **Schlägt etwas fehl, rollt er automatisch
 zurück.**
 
-> **Alle bisherigen Admins werden zu Owner** — für sie ändert sich also nichts. Danach stufst du in der
-> Teamverwaltung herab, wen du willst.
+**Owner auswählen:** Der Installer fragt: *„Wer soll Owner werden?“* — gib die **E-Mail-Adresse** ein, die das
+Konto im Panel hat (mehrere mit Komma). Stimmt die Adresse nicht, fragt er erneut. Danach wählst du, was die
+**übrigen bisherigen Admins** werden: Administrator (Standard), Moderator, Benutzer (kein Admin-Zugang mehr)
+oder Owner. **Leere Eingabe** = alle bisherigen Admins bleiben Owner (altes Verhalten, nichts ändert sich).
+Später änderst du Rollen jederzeit in der Teamverwaltung.
 
-Optionen: `--yes` (ohne Rückfrage), `--web-user www-data`. Docker: Befehle im Container ausführen und
+Ohne Rückfragen: `sudo bash install.sh /var/www/pterodactyl --owner ich@example.com --others administrator --yes`
+
+Optionen: `--yes` (ohne Rückfrage), `--owner EMAIL[,EMAIL2]`, `--others administrator|moderator|friend|user|owner`,
+`--web-user www-data`. Docker: Befehle im Container ausführen und
 `/app` als Panel-Pfad angeben (`/app/extensions` muss ein Volume sein).
 
 Danach im Panel die Seite neu laden.

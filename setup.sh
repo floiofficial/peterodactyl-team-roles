@@ -24,10 +24,10 @@ die()  { printf '\033[1;31mFEHLER:\033[0m %s\n' "$*" >&2; exit 1; }
 
 # Eingaben immer vom Terminal lesen (funktioniert auch bei "curl ... | bash")
 ask() {   # $1 = Frage, $2 = Variablenname
-    local reply=""
-    if [ -r /dev/tty ] && [ -z "${TEAMROLES_STDIN:-}" ]; then read -r -p "$1" reply < /dev/tty || true
-    else read -r -p "$1" reply || true; fi
-    printf -v "$2" '%s' "$reply"
+    local __ans=""
+    if [ -r /dev/tty ] && [ -z "${TEAMROLES_STDIN:-}" ]; then read -r -p "$1" __ans < /dev/tty || true
+    else read -r -p "$1" __ans || true; fi
+    printf -v "$2" '%s' "$__ans"
 }
 
 [ "$(id -u)" -eq 0 ] || [ -n "${TEAMROLES_ALLOW_NONROOT:-}" ] || die "Bitte als root ausfuehren (sudo -i, dann den Befehl erneut)."
