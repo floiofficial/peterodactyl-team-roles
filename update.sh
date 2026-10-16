@@ -226,13 +226,13 @@ for item in extension tools tests; do
     rm -rf "${SCRIPT_DIR:?}/$item"
     cp -a "$PKG/$item" "$SCRIPT_DIR/$item"
 done
-for file in install.sh uninstall.sh README.md README.de.md; do
+for file in install.sh uninstall.sh diagnose.sh README.md README.de.md; do
     [ -f "$PKG/$file" ] && cp -f "$PKG/$file" "$SCRIPT_DIR/$file" || true
 done
 printf '%s\n' "$REPO" > "$SCRIPT_DIR/.update-repo"
 
 echo
-say "Done. Reload the page in your browser and check Admin -> Users -> Team management (\"Permission check is active\")."
+say "Done. Reload the page with Ctrl+F5 and look in the admin sidebar for \"Team management\" and \"Support tickets\". Not there? Run: sudo bash $SCRIPT_DIR/diagnose.sh"
 say "Back to the old version: sudo bash $SCRIPT_DIR/update.sh --rollback"
 echo "(by floiofficial)"
 

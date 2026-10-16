@@ -37,13 +37,20 @@ def.setup({ screens: { register: (id, imp) => { screens[id] = imp; } }, slots: {
 // ---- manifest <-> setup, documented slots only
 for (const s of manifest.ui.screens) ok('screen registered: ' + s.id, typeof screens[s.id] === 'function');
 ok('no extra screens', Object.keys(screens).length === manifest.ui.screens.length);
-const DOC_SLOTS = ['nav.items.before', 'nav.items.after', 'dashboard.before', 'dashboard.after', 'panel.overview.before', 'panel.overview.after', 'panel.users.before', 'panel.users.after', 'panel.users.detail.actions', 'account.overview.before', 'account.overview.after'];
+const DOC_SLOTS = [
+    'nav.items.before', 'nav.items.after',
+    'dashboard.before', 'dashboard.after', 'dashboard.serverRow.before', 'dashboard.serverRow.after', 'dashboard.serverRow.name.after', 'dashboard.serverRow.metrics.after',
+    'account.navigation.before', 'account.navigation.after', 'account.overview.before', 'account.overview.after',
+    'panel.navigation.before', 'panel.navigation.after', 'panel.overview.before', 'panel.overview.after',
+    'panel.users.before', 'panel.users.after', 'panel.users.create.before', 'panel.users.create.after', 'panel.users.detail.before', 'panel.users.detail.after', 'panel.users.detail.actions', 'panel.users.detail.form',
+    'panel.settings.before', 'panel.settings.after', 'panel.extensions.before', 'panel.extensions.after',
+]; // subset of the reference's slot list that this test knows; every slot the extension registers must be in it
 ok('only documented slots', Object.keys(slots).every(n => DOC_SLOTS.includes(n)));
 ok('support screen is an account screen', manifest.ui.screens.find(s => s.id === 'support').area === 'account');
 const adminNav = manifest.ui.screens.filter(s => s.area === 'admin' && !s.parent && s.nav).map(s => s.id);
 ok('Team management and Support tickets are own admin categories', adminNav.includes('team') && adminNav.includes('tickets'));
 ok('support tickets admin category is registered', typeof screens.tickets === 'function');
-ok('manifest version 1.1.0', manifest.version === '1.1.0');
+ok('manifest version 1.2.0', manifest.version === '1.2.0');
 ok('manifest all English', !/[äöüß]|Rollen|Freund|Kunde/.test(JSON.stringify(manifest)));
 
 // ---- dictionaries
@@ -125,6 +132,20 @@ ok('automatic option clears stored choice', !('team-roles.lang' in store));
 // back to list
 await click(byText('button', '← Back to tickets'));
 ok('back to list', T().includes('My tickets'));
+
+// e-mail preference
+reset(); seed(); asCustomer(); be.mail = true;
+await mountScreen(Support);
+{
+    const box = find(R.tree(), e => e.tag === 'input' && e.props.type === 'checkbox')[0];
+    ok('mail setting shown, checked by default', T().includes('E-mail me when there is a new message in a ticket') && box && box.props.checked === true);
+    await box.props.onChange({ target: { checked: false } }); await R.settle();
+    const put = be.calls.find(c => c[0] === 'PUT' && c[1].endsWith('/tickets/settings'));
+    ok('switching off sends email_notifications=false', put && put[2].email_notifications === false && be.mail === false);
+    ok('checkbox now unchecked + toast', find(R.tree(), e => e.tag === 'input' && e.props.type === 'checkbox')[0].props.checked === false && globalThis.__toasts.some(x => x[1] === 'E-mail notifications are off.'));
+    await find(R.tree(), e => e.tag === 'input' && e.props.type === 'checkbox')[0].props.onChange({ target: { checked: true } }); await R.settle();
+    ok('switching on again', be.mail === true && globalThis.__toasts.some(x => x[1] === 'E-mail notifications are on.'));
+}
 
 // panel locale default
 reset(); seed(); asCustomer(); globalThis.__locale = 'de';

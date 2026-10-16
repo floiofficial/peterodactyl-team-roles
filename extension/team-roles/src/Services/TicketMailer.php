@@ -17,13 +17,17 @@ use TeamRoles\Support\TicketMail;
  */
 final class TicketMailer
 {
-    public function __construct(private readonly ConnectionInterface $db, private readonly TeamService $team)
+    public function __construct(
+        private readonly ConnectionInterface $db,
+        private readonly TeamService $team,
+        private readonly ?TicketService $tickets = null,
+    )
     {
     }
 
     public static function make(): self
     {
-        return new self(app('db')->connection(), app(TeamService::class));
+        return new self(app('db')->connection(), app(TeamService::class), app(TicketService::class));
     }
 
     /** @param array<string, mixed> $ticket */
@@ -50,6 +54,10 @@ final class TicketMailer
     /** @param list<int> $userIds */
     private function send(array $userIds, string $subject, string $body): void
     {
+        if ($this->tickets !== null) {
+            // People who switched e-mails off in their ticket settings get nothing.
+            $userIds = array_values(array_diff($userIds, $this->tickets->mailDisabledIds($userIds)));
+        }
         if ($userIds === []) {
             return;
         }

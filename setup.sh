@@ -77,7 +77,7 @@ fetch_release() {   # downloads + verifies the latest release into $HOME_DIR
 
     mkdir -p "$HOME_DIR/backups"          # backups/ is kept across updates
     for item in extension tools tests .github; do rm -rf "${HOME_DIR:?}/$item"; [ -e "$pkg/$item" ] && cp -a "$pkg/$item" "$HOME_DIR/$item"; true; done
-    for f in install.sh uninstall.sh update.sh setup.sh README.md README.de.md; do [ -f "$pkg/$f" ] && cp -f "$pkg/$f" "$HOME_DIR/$f"; true; done
+    for f in install.sh uninstall.sh update.sh diagnose.sh setup.sh README.md README.de.md; do [ -f "$pkg/$f" ] && cp -f "$pkg/$f" "$HOME_DIR/$f"; true; done
     chmod +x "$HOME_DIR"/*.sh
     printf '%s\n' "$REPO" > "$HOME_DIR/.update-repo"
     say "Files are in $HOME_DIR"
@@ -113,8 +113,14 @@ do_update() {
     bash "$HOME_DIR/update.sh" "$PANEL_DIR" --repo "$REPO"
 }
 
+do_diagnose() {
+    ask_panel
+    if [ ! -f "$HOME_DIR/diagnose.sh" ]; then fetch_release; fi
+    bash "$HOME_DIR/diagnose.sh" "$PANEL_DIR"
+}
+
 choice="${1:-}"
-case "$choice" in install|1) choice=1 ;; uninstall|2) choice=2 ;; update|3) choice=3 ;; "") ;; *) die "Unknown option '$choice' (install | uninstall | update)." ;; esac
+case "$choice" in install|1) choice=1 ;; uninstall|2) choice=2 ;; update|3) choice=3 ;; diagnose|4) choice=4 ;; "") ;; *) die "Unknown option '$choice' (install | uninstall | update | diagnose)." ;; esac
 
 if [ -z "$choice" ]; then
     echo
@@ -123,15 +129,17 @@ if [ -z "$choice" ]; then
     echo "   1) Install"
     echo "   2) Uninstall"
     echo "   3) Update"
+    echo "   4) Diagnose (why is it not visible?)"
     echo "   0) Exit"
     echo
-    ask "Choice [0-3]: " choice
+    ask "Choice [0-4]: " choice
 fi
 
 case "$choice" in
     1) do_install ;;
     2) do_uninstall ;;
     3) do_update ;;
+    4) do_diagnose ;;
     0|"") echo "Exited. Nothing was changed." ;;
     *) die "Invalid choice '$choice'." ;;
 esac

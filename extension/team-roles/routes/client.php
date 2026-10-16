@@ -11,6 +11,8 @@ use TeamRoles\Http\Controllers\TicketController;
 Route::get('/me', [TeamController::class, 'me']);
 
 Route::get('/tickets/summary', [TicketController::class, 'summary']);
+Route::get('/tickets/settings', [TicketController::class, 'settings']);
+Route::put('/tickets/settings', [TicketController::class, 'updateSettings'])->middleware('throttle:30,1');
 Route::get('/tickets', [TicketController::class, 'index']);
 Route::post('/tickets', [TicketController::class, 'store'])->middleware('throttle:10,1');
 Route::get('/tickets/{ticket}', [TicketController::class, 'show'])->whereNumber('ticket');

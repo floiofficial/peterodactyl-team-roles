@@ -19,6 +19,7 @@ final class TicketService
     public const TICKETS = 'ext_team_roles_tickets';
     public const MESSAGES = 'ext_team_roles_ticket_messages';
     public const READS = 'ext_team_roles_ticket_reads';
+    public const PREFS = 'ext_team_roles_ticket_prefs';
 
     /** Max. tickets scanned for the notification counter. */
     private const SUMMARY_LIMIT = 1000;
@@ -44,12 +45,57 @@ final class TicketService
             return;
         }
         $schema = $this->db->getSchemaBuilder();
+        $dir = dirname(__DIR__, 2) . '/database/migrations/';
         if (! $schema->hasTable(self::TICKETS) || ! $schema->hasTable(self::MESSAGES) || ! $schema->hasTable(self::READS)) {
-            $file = dirname(__DIR__, 2) . '/database/migrations/2026_10_16_000100_create_ext_team_roles_ticket_tables.php';
-            $migration = require $file;
+            $migration = require $dir . '2026_10_16_000100_create_ext_team_roles_ticket_tables.php';
+            $migration->up();
+        }
+        if (! $schema->hasTable(self::PREFS)) {
+            $migration = require $dir . '2026_10_17_000000_create_ext_team_roles_ticket_prefs.php';
             $migration->up();
         }
         self::$tablesChecked = true;
+    }
+
+    /** Does this user want e-mails about ticket messages? Default: yes. */
+    public function mailEnabled(int $userId): bool
+    {
+        return ! in_array($userId, $this->mailDisabledIds([$userId]), true);
+    }
+
+    public function setMailEnabled(int $userId, bool $enabled): void
+    {
+        $now = $this->now();
+        $existing = $this->db->table(self::PREFS)->where('user_id', $userId)->first();
+        if ($existing === null) {
+            $this->db->table(self::PREFS)->insert(['user_id' => $userId, 'email_notifications' => $enabled ? 1 : 0, 'created_at' => $now, 'updated_at' => $now]);
+        } else {
+            $this->db->table(self::PREFS)->where('id', $existing->id)->update(['email_notifications' => $enabled ? 1 : 0, 'updated_at' => $now]);
+        }
+    }
+
+    /**
+     * Of the given users: those who switched e-mails off.
+     *
+     * @param list<int> $userIds
+     * @return list<int>
+     */
+    public function mailDisabledIds(array $userIds): array
+    {
+        $userIds = array_values(array_unique(array_map('intval', $userIds)));
+        if ($userIds === []) {
+            return [];
+        }
+        $off = [];
+        foreach (array_chunk($userIds, 500) as $chunk) {
+            foreach ($this->db->table(self::PREFS)->whereIn('user_id', $chunk)->get(['user_id', 'email_notifications']) as $row) {
+                if ((int) $row->email_notifications === 0) {
+                    $off[] = (int) $row->user_id;
+                }
+            }
+        }
+
+        return $off;
     }
 
     /** @return array<string, mixed>|null */

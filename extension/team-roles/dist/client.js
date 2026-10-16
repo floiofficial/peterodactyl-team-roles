@@ -160,6 +160,10 @@ const EN = {
     'sup.statusChanged': 'Status changed.',
     'sup.priorityChanged': 'Priority changed.',
     'sup.noAccess': 'You are not allowed to see all tickets.',
+    'mail.label': 'E-mail me when there is a new message in a ticket',
+    'mail.hint': 'Sent to the e-mail address of your account. You can change this at any time; the panel notification stays.',
+    'mail.on': 'E-mail notifications are on.',
+    'mail.off': 'E-mail notifications are off.',
     'prio.low': 'Low',
     'prio.normal': 'Normal',
     'prio.high': 'High',
@@ -327,6 +331,10 @@ const DE = {
     'sup.statusChanged': 'Status geändert.',
     'sup.priorityChanged': 'Priorität geändert.',
     'sup.noAccess': 'Du darfst nicht alle Tickets sehen.',
+    'mail.label': 'Per E-Mail benachrichtigen, wenn es eine neue Nachricht in einem Ticket gibt',
+    'mail.hint': 'Gesendet an die E-Mail-Adresse deines Kontos. Du kannst das jederzeit ändern; die Benachrichtigung im Panel bleibt.',
+    'mail.on': 'E-Mail-Benachrichtigungen sind an.',
+    'mail.off': 'E-Mail-Benachrichtigungen sind aus.',
     'prio.low': 'Niedrig',
     'prio.normal': 'Normal',
     'prio.high': 'Hoch',
@@ -1031,6 +1039,38 @@ function TicketDetail({ id, onBack }) {
             : (tk.status === 'closed' ? h(Note, { type: 'info' }, t('sup.closedNote')) : null));
 }
 
+function MailSetting() {
+    const { t } = useT();
+    const [on, setOn] = useState(null);
+    const [busy, setBusy] = useState(false);
+
+    useEffect(() => {
+        let alive = true;
+        client.get('/tickets/settings').then((d) => { if (alive) setOn(Boolean(d && d.email_notifications)); }).catch(() => {});
+        return () => { alive = false; };
+    }, []);
+
+    if (on === null) return null;
+
+    const change = (value) => {
+        setBusy(true);
+        client.put('/tickets/settings', { email_notifications: value })
+            .then((d) => {
+                const next = Boolean(d && d.email_notifications);
+                setOn(next);
+                toast.ok(t(next ? 'mail.on' : 'mail.off'));
+            })
+            .catch((e) => toast.err(errText(e)))
+            .then(() => setBusy(false));
+    };
+
+    return h('label', { style: { ...S.row, alignItems: 'flex-start', gap: 8, cursor: 'pointer' } },
+        h('input', { type: 'checkbox', checked: on, disabled: busy, onChange: (e) => change(e.target.checked), style: { marginTop: 3 } }),
+        h('span', null,
+            h('span', { style: { fontWeight: 600 } }, t('mail.label')),
+            h('span', { style: { ...S.muted, display: 'block' } }, t('mail.hint'))));
+}
+
 function SupportScreen() {
     const { t } = useT();
     const summary = useSummary();
@@ -1063,7 +1103,7 @@ function SupportScreen() {
             h(TicketList, { key: scope, scope: canAll ? scope : 'mine', onOpen: (id) => setView({ name: 'detail', id }), summaryKey }));
     }
 
-    return h(Page, { title: t('sup.title') }, h('div', { style: S.stack }, body, h(Footer)));
+    return h(Page, { title: t('sup.title') }, h('div', { style: S.stack }, body, h(MailSetting), h(Footer)));
 }
 
 // ================================================================== SLOTS

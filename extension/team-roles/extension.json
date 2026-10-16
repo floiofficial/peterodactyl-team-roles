@@ -1,7 +1,7 @@
 {
     "id": "team-roles",
     "name": "Team management",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "description": "Roles (Owner, Administrator, Moderator, Friend, User / Customer) with configurable rights, plus a support ticket system with notifications. By floiofficial.",
     "author": "floiofficial",
     "icon": "shield-check",

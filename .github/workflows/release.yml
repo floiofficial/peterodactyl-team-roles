@@ -56,7 +56,7 @@ jobs:
       - name: Check shell scripts
         run: |
           set -e
-          for f in install.sh uninstall.sh update.sh setup.sh; do bash -n "$f"; done
+          for f in install.sh uninstall.sh update.sh diagnose.sh setup.sh; do bash -n "$f"; done
 
       - name: Check UI (syntax, manifest, UI test)
         run: |

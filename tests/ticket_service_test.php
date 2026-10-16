@@ -37,6 +37,7 @@ $pdo->exec('CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT)');
 $pdo->exec('CREATE TABLE ext_team_roles_tickets (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT, subject TEXT, description TEXT, priority TEXT DEFAULT "normal", status TEXT DEFAULT "open", activity_seq INT DEFAULT 1, last_actor_id INT, last_activity_at TEXT, created_at TEXT, updated_at TEXT)');
 $pdo->exec('CREATE TABLE ext_team_roles_ticket_messages (id INTEGER PRIMARY KEY AUTOINCREMENT, ticket_id INT, user_id INT, body TEXT, is_staff INT DEFAULT 0, created_at TEXT, updated_at TEXT)');
 $pdo->exec('CREATE TABLE ext_team_roles_ticket_reads (id INTEGER PRIMARY KEY AUTOINCREMENT, ticket_id INT, user_id INT, seen_seq INT DEFAULT 0, created_at TEXT, updated_at TEXT, UNIQUE(ticket_id, user_id))');
+$pdo->exec('CREATE TABLE ext_team_roles_ticket_prefs (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INT UNIQUE, email_notifications INT DEFAULT 1, created_at TEXT, updated_at TEXT)');
 foreach ([[1, 'floi'], [2, 'friend1'], [3, 'mod1'], [4, 'customer1'], [5, 'customer2']] as $u) {
     $pdo->prepare('INSERT INTO users VALUES (?, ?)')->execute($u);
 }
@@ -140,6 +141,19 @@ check('other tickets untouched', $svc->find(1) !== null && $svc->find(2) !== nul
 // --- unknown / edge
 check('find unknown', $svc->find(999) === null);
 check('username fallback', $svc->username(999) === '#999');
+
+// --- e-mail preference (default on, per user)
+check('mail default is on', $svc->mailEnabled(4) === true && $svc->mailDisabledIds([4, 5]) === []);
+$svc->setMailEnabled(4, false);
+check('mail switched off', $svc->mailEnabled(4) === false && $svc->mailEnabled(5) === true);
+check('disabled list only contains opted-out users', $svc->mailDisabledIds([1, 2, 3, 4, 5]) === [4]);
+$svc->setMailEnabled(4, false);
+check('switching off twice keeps one row', (int) $pdo->query('SELECT COUNT(*) FROM ext_team_roles_ticket_prefs WHERE user_id = 4')->fetchColumn() === 1);
+$svc->setMailEnabled(4, true);
+check('mail switched on again', $svc->mailEnabled(4) === true && $svc->mailDisabledIds([4]) === []);
+$svc->setMailEnabled(2, false);
+check('staff can opt out too', $svc->mailDisabledIds([2, 3, 4]) === [2]);
+check('empty list', $svc->mailDisabledIds([]) === []);
 
 echo "\n" . ($failed === 0 ? "OK: $total checks, 0 failed\n" : "$failed of $total checks FAILED\n");
 exit($failed === 0 ? 0 : 1);

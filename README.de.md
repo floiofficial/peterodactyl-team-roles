@@ -53,7 +53,7 @@ Mehr dazu weiter unten bei „Ein-Befehl-Installer“. Vorher bitte die Hinweise
 
 * ein Ticket erstellen: **Betreff**, Feld **„Was ist das Problem?“** und eine **Priorität** (Niedrig · Normal · Hoch · Dringend),
 * **seine eigenen** Tickets sehen, weiterschreiben, schließen und wieder öffnen,
-* eine Benachrichtigung (Panel + **E-Mail**) bekommen, wenn das Team antwortet.
+* eine Benachrichtigung (Panel + **E-Mail**) bekommen, wenn das Team antwortet – die E-Mail kann **jeder Benutzer selbst an- oder ausschalten** (Häkchen unten auf der Support-Seite, Standard: an).
 
 **Team** (Owner, Administrator, Moderator, Freund – je nachdem, was du einstellst) kann zusätzlich, pro Rolle:
 
@@ -80,7 +80,18 @@ Gut zu wissen:
 * **E-Mails** nutzen die Mail-Einstellungen des Panels. Sie gehen bei einem neuen Ticket oder einer
   Kunden-Antwort an die Rollen mit „Benachrichtigt werden“ und an den Kunden, wenn das Team antwortet; je Person eine eigene
   Mail mit kurzem Auszug und Link. Ist Mail nicht eingerichtet oder schlägt der Versand fehl, funktionieren Tickets normal
-  (der Fehler wird nur protokolliert).
+  (der Fehler wird nur protokolliert). Jeder (Kunden und Team) kann E-Mails für sich auf der Support-Seite ausschalten;
+  die Panel-Benachrichtigung bleibt.
+
+## Im Panel nicht sichtbar? Diagnose
+
+```bash
+sudo bash setup.sh        # -> 4) Diagnose      (oder: sudo bash diagnose.sh /var/www/pterodactyl)
+```
+
+Nur lesend. Zeigt, was das Panel sagt (`p:extension:list`, `p:extension:doctor`), ob die gebauten Dateien und Assets
+vorhanden sind und ob die Datenbank-Tabellen existieren. Danach das Panel mit **Strg+F5** neu laden und in der
+Browser-Konsole (F12) nach roten Zeilen zur Erweiterung schauen.
 
 ## Installieren (manuell)
 
@@ -253,7 +264,7 @@ Was das Skript sicherstellt:
 * Aktualisiert wird per `p:extension:install` über die vorhandene Version. **Es wird nie `p:extension:remove`
   benutzt** — sonst fiele die Rechteprüfung weg und Moderatoren wären kurzzeitig Voll-Admins. Schlägt die
   Installation fehl, stellt das Panel die alte Version selbst wieder her.
-* Datenbank-Migrationen einer neuen Version laufen automatisch (Version 1.1.0 legt die Ticket-Tabellen an). Führt das
+* Datenbank-Migrationen einer neuen Version laufen automatisch (Version 1.1.0 legt die Ticket-Tabellen an, Version 1.2.0 die Tabelle für die E-Mail-Einstellung). Führt das
   Panel die neue Migration beim Update nicht aus, legt die Extension die Ticket-Tabellen bei der ersten Nutzung selbst an.
   Ein Rollback dreht sie **nicht** zurück — mach vor einem Update ein Datenbank-Backup.
 

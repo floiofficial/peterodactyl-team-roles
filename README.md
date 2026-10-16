@@ -52,7 +52,7 @@ panel and **which e-mail address becomes Owner**. Please read "Read this first" 
 
 * create a ticket: **subject**, **"What is the problem?"** field and a **priority** (Low · Normal · High · Urgent),
 * see **their own** tickets, write follow-up messages, close and re-open them,
-* get a notification (panel + **e-mail**) when the team replies.
+* get a notification (panel + **e-mail**) when the team replies - the e-mail can be **switched on or off by each user** (checkbox at the bottom of the Support page, default: on).
 
 **Staff** (Owner, Administrator, Moderator, Friend – whatever you configure) can additionally, per role:
 
@@ -78,7 +78,18 @@ Rules worth knowing:
 * The notification counter refreshes every 60 seconds while the browser tab is visible.
 * **E-mails** use the panel's own mail settings. They go to the roles with "Get notified" on a new
   ticket or a customer reply, and to the customer when the team replies; one separate mail per person with a short excerpt
-  and a link. If mail is not configured or sending fails, tickets work as usual (the failure is only logged).
+  and a link. Everybody (customers and staff) can switch e-mails off for themselves on the Support page; the panel
+  notification stays. If mail is not configured or sending fails, tickets work as usual (the failure is only logged).
+
+## Not visible in the panel? Diagnose
+
+```bash
+sudo bash setup.sh        # -> 4) Diagnose      (or: sudo bash diagnose.sh /var/www/pterodactyl)
+```
+
+Read-only. It shows what the panel says (`p:extension:list`, `p:extension:doctor`), whether the built files and
+assets are in place and whether the database tables exist. Then reload the panel with **Ctrl+F5** and look at the
+browser console (F12) for red lines mentioning the extension.
 
 ## Install (manual)
 
@@ -216,7 +227,7 @@ What the script guarantees:
 * The installed version is backed up to `backups/` first (for `--rollback`).
 * Updating uses `p:extension:install` over the existing version. **`p:extension:remove` is never used** – otherwise
   the permission check would disappear and Moderators would briefly be full admins.
-* Database migrations of a new version run automatically (version 1.1.0 adds the ticket tables). If the panel does not run
+* Database migrations of a new version run automatically (version 1.1.0 adds the ticket tables, version 1.2.0 the e-mail setting table). If the panel does not run
   the new migration during an update, the extension creates the ticket tables itself on first use. A rollback does
   **not** revert them – take a database backup before updating.
 

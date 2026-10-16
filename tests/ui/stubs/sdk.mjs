@@ -5,7 +5,7 @@ export const httpErrorToHuman = (e) => 'HUMAN:' + (e && e.message);
 export const useSiteSettings = () => ({ locale: globalThis.__locale || 'en' });
 export const useCurrentResource = () => globalThis.__resource ?? null;
 
-const be = (globalThis.__be = { calls: [], user: { id: 1, name: 'cust' }, can: { view: false, reply: false, manage: false, delete: false, notify: false }, tickets: [], messages: [], seen: {}, nextId: 1, roles: null, health: null, members: [], lastPut: null });
+const be = (globalThis.__be = { calls: [], user: { id: 1, name: 'cust' }, can: { view: false, reply: false, manage: false, delete: false, notify: false }, tickets: [], messages: [], seen: {}, nextId: 1, roles: null, health: null, mail: true, members: [], lastPut: null });
 const fail = (status, message, errors) => { const e = new Error(message || 'HTTP ' + status); e.response = { status, data: { message, errors } }; return Promise.reject(e); };
 const ok = (data) => Promise.resolve({ data });
 const names = { 1: 'cust', 2: 'staffy', 3: 'other' };
@@ -23,6 +23,8 @@ function route(method, url, body, params) {
     if (url.includes('/api/client/')) {
         if (be.fail403 && u !== '/tickets/summary') return fail(403, 'nope');
         if (method === 'GET' && u === '/tickets/summary') return ok(summary());
+        if (method === 'GET' && u === '/tickets/settings') return ok({ email_notifications: be.mail });
+        if (method === 'PUT' && u === '/tickets/settings') { be.mail = Boolean(body.email_notifications); return ok({ email_notifications: be.mail }); }
         if (method === 'GET' && u === '/tickets') {
             if (params.scope === 'all' && !be.can.view) return fail(403, 'You are not allowed to see all tickets.');
             let list = be.tickets.filter(t => params.scope === 'all' ? true : t.user_id === be.user.id);

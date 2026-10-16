@@ -42,6 +42,25 @@ final class TicketController extends Controller
         return new JsonResponse($this->tickets->summary($role, (int) $request->user()->id) + ['can' => TicketRules::abilities($role)]);
     }
 
+    /** GET /tickets/settings - { email_notifications: bool } */
+    public function settings(Request $request): JsonResponse
+    {
+        return new JsonResponse(['email_notifications' => $this->tickets->mailEnabled((int) $request->user()->id)]);
+    }
+
+    /** PUT /tickets/settings  { email_notifications: bool } */
+    public function updateSettings(Request $request): JsonResponse
+    {
+        $value = filter_var($request->input('email_notifications'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+        if ($value === null) {
+            throw ValidationException::withMessages(['email_notifications' => ['Please send true or false.']]);
+        }
+        $userId = (int) $request->user()->id;
+        $this->tickets->setMailEnabled($userId, $value);
+
+        return new JsonResponse(['email_notifications' => $this->tickets->mailEnabled($userId)]);
+    }
+
     /** GET /tickets?scope=mine|all&status=&priority=&search=&sort=&page= */
     public function index(Request $request): JsonResponse
     {
