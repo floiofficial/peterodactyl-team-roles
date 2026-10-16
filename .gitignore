@@ -1,0 +1,18 @@
+# Teamverwaltung - von floiofficial
+
+# NIEMALS einchecken: enthaelt Benutzernamen und E-Mail-Adressen deiner Admins
+backups/*
+!backups/.gitkeep
+
+# Zugangsdaten / lokale Einstellungen
+.env
+.update-repo
+*.pem
+*.key
+
+# Build-/Testreste
+node_modules/
+vendor/
+*.zip
+*.sha256
+.DS_Store

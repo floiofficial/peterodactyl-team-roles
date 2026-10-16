@@ -1,0 +1,35 @@
+{
+    "id": "team-roles",
+    "name": "Teamverwaltung",
+    "version": "1.0.0",
+    "description": "Rollen (Owner, Administrator, Moderator, Freund, Kunde) mit einstellbaren Rechten. Von floiofficial.",
+    "author": "floiofficial",
+    "icon": "shield-check",
+    "requires": {
+        "panel": ">=2.0.0-beta.1 <3.0",
+        "php": "^8.3"
+    },
+    "provider": "TeamRoles\\TeamRolesProvider",
+    "autoload": {
+        "TeamRoles\\": "src"
+    },
+    "ui": {
+        "entry": "dist/client.js",
+        "mode": "native",
+        "screens": [
+            {
+                "id": "team",
+                "area": "admin",
+                "path": "team",
+                "nav": { "label": "Teamverwaltung", "icon": "shield-check", "order": 5 }
+            },
+            {
+                "id": "user-role",
+                "area": "admin",
+                "parent": "admin.user",
+                "path": "role",
+                "nav": { "label": "Rolle", "icon": "user-cog", "order": 5 }
+            }
+        ]
+    }
+}

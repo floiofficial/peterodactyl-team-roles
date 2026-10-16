@@ -1,0 +1,92 @@
+# Teamverwaltung (team-roles) - von floiofficial
+#
+# - Bei jedem Push / Pull Request: Pruefungen (PHP-Syntax, Rechte-Test, Oberflaeche, Shell-Syntax)
+# - Bei einem Tag "vX.Y.Z": zusaetzlich ein Release mit fertigem Zip + SHA-256-Pruefsumme
+#
+# Neue Version veroeffentlichen:
+#   1. "version" in extension/team-roles/extension.json erhoehen (z. B. 1.1.0), committen, pushen
+#   2. git tag v1.1.0 && git push origin v1.1.0
+name: Pruefen und Release
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Pruefungen
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: PHP-Syntax
+        run: |
+          set -e
+          find extension tools tests -name '*.php' -print0 | xargs -0 -n1 php -l
+
+      - name: Rechte-Logik testen
+        run: php tests/policy_test.php
+
+      - name: Shell-Skripte pruefen
+        run: |
+          set -e
+          for f in install.sh uninstall.sh update.sh; do bash -n "$f"; done
+
+      - name: Oberflaeche pruefen (Syntax + Manifest)
+        run: |
+          set -e
+          cp extension/team-roles/dist/client.js /tmp/client.mjs
+          node --check /tmp/client.mjs
+          node -e "const m=require('./extension/team-roles/extension.json'); if(m.id!=='team-roles') throw new Error('id'); console.log('Manifest ok, Version', m.version)"
+
+  release:
+    name: Release bauen
+    needs: check
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # noetig, um das Release anzulegen
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tag muss zur Version im Manifest passen
+        run: |
+          set -e
+          VERSION="$(node -p "require('./extension/team-roles/extension.json').version")"
+          if [ "${GITHUB_REF_NAME}" != "v${VERSION}" ]; then
+            echo "Tag ${GITHUB_REF_NAME} passt nicht zu extension.json (Version ${VERSION})." >&2
+            exit 1
+          fi
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+
+      - name: Zip und Pruefsumme erzeugen
+        run: |
+          set -e
+          NAME="floiofficial-teamverwaltung-${VERSION}.zip"
+          git archive --format=zip --prefix=floiofficial-teamverwaltung/ -o "${NAME}" HEAD
+          sha256sum "${NAME}" > "${NAME}.sha256"
+          cat "${NAME}.sha256"
+
+      - name: Release veroeffentlichen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          gh release create "${GITHUB_REF_NAME}" \
+            "floiofficial-teamverwaltung-${VERSION}.zip" \
+            "floiofficial-teamverwaltung-${VERSION}.zip.sha256" \
+            --title "Teamverwaltung ${VERSION}" \
+            --generate-notes
