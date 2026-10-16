@@ -189,7 +189,7 @@ say "Checking the result"
 tool status
 
 echo
-say "Done. In the panel open: Admin -> Users -> \"Team management\" tab (reload the page once)."
-say "Role per user: Admin -> Users -> user -> 'Role' tab. Support tickets: account menu -> Support."
+say "Done. In the panel open: Admin -> \"Team management\" and \"Support tickets\" (reload the page once)."
+say "Role per user: Admin -> Users -> user -> 'Role' tab. Customers find \"Support\" in the top navigation."
 say "To undo: sudo bash $SCRIPT_DIR/uninstall.sh $PANEL_DIR"
 echo "(by floiofficial)"

@@ -40,10 +40,11 @@ panel and **which e-mail address becomes Owner**. Please read "Read this first" 
 
 | What | Where |
 |---|---|
-| Roles & rights, members | **Admin → Users → "Team management" tab** (tab bar above the user list) – Owner only |
+| Roles & rights, members | **Admin → "Team management"** (own category in the admin sidebar, like Users or Locations) – Owner only |
 | Role of one person | **Admin → Users → [user] → "Role" tab** – Owner only |
-| Support tickets (create, read, reply) | **Account menu → Support** (`/account/support`) – everyone; also reachable from the tab bar on the Users page |
-| Notifications | Blue **"Support (n)"** pill in the navigation + a banner on the dashboard / admin overview |
+| All tickets (staff) | **Admin → "Support tickets"** (own category in the admin sidebar) |
+| Support tickets (create, read, reply) | **"Support" and "+ New ticket" in the top navigation** of the dashboard (everyone, also customers) → `/account/support`; also in the account menu |
+| Notifications | The **"Support (n)"** link in the top navigation turns blue with the count + a banner on the dashboard / admin overview |
 
 ## Support tickets
 
@@ -63,7 +64,7 @@ panel and **which e-mail address becomes Owner**. Please read "Read this first" 
 | Delete tickets | Permanently delete a ticket with all its messages |
 | Get notified | Panel notification **and e-mail** for new tickets and replies of other people (**only together with "See all tickets"**) |
 
-Set these under **Admin → Users → Team management → Roles & rights → "Support tickets"** (checkboxes at the
+Set these under **Admin → Team management → Roles & rights → "Support tickets"** (checkboxes at the
 bottom of each role). Defaults: Administrator all five; Moderator and Friend: see, reply, notified; User / Customer:
 none (their own tickets always work).
 
@@ -93,7 +94,7 @@ accounts to `backups/` and installs + enables the extension. **If anything fails
 account has in the panel (several: comma-separated). If the address is unknown it asks again. Then you choose
 what the **remaining current admins** become: Administrator (default), Moderator, User (no admin access any
 more) or Owner. **Empty input** = all current admins stay Owner (previous behaviour, nothing changes).
-You can change roles at any time later under Team management.
+You can change roles at any time later under Admin → Team management.
 
 Without questions: `sudo bash install.sh /var/www/pterodactyl --owner me@example.com --others administrator --yes`
 
@@ -264,7 +265,7 @@ php tools/team-tool.php /var/www/pterodactyl demote-staff
 * **Ticket rules** (who may see/reply/manage, validation, status, "unread"): 66 checks (`tests/ticket_rules_test.php`)
 * **Ticket database logic** on an SQLite stand-in for Laravel's query builder: 39 checks (`tests/ticket_service_test.php`)
 * **Ticket e-mails** (recipients, texts, header-injection safety, mail failures never break tickets): 28 checks (`tests/ticket_mail_test.php`) – with a fake mailer, **no real e-mail was sent**
-* **User interface** with a simulated React/SDK and a fake backend: 75 checks (`tests/ui/run.mjs`) – customer creates a
+* **User interface** with a simulated React/SDK and a fake backend: 78 checks (`tests/ui/run.mjs`) – customer creates a
   ticket with priority, team replies, notifications, language switch EN/DE, rights editor, matching of manifest
   and registered screens/slots
 * **Installer/uninstaller/update/setup** with a fake panel and a mock GitHub API
@@ -284,7 +285,8 @@ php tools/team-tool.php /var/www/pterodactyl demote-staff
 | Column `users.root_admin` exists | The migration aborts **before any change** with a clear message |
 | Admin API under `/api/admin/<area>` with areas like `users`, `servers`, `nodes`, … | Different areas fall under "Other admin areas" (read-only) / are blocked for writes → too strict rather than too open; adjust `src/Support/PermissionMap.php` |
 | `routes/client.php` is reachable by every signed-in user at `/api/client/extensions/team-roles` | Tickets would not load; the admin pages still work |
-| Account screens (`area: account`) appear in the account menu | Tickets stay reachable at `/account/support` and via the tab bar |
+| Account screens (`area: account`) appear in the account menu; admin screens with `nav` appear in the admin sidebar | Tickets stay reachable at `/account/support` (also via the top navigation link) |
+| The slot `nav.items.after` is the top navigation where the "Support" / "+ New ticket" links appear | The links do not show up there; tickets are still reachable via the account menu and `/account/support` |
 | Screens get the user id as `params.id` or `resource` | The "Role" tab says the user ID could not be determined; Team management still works |
 
 If something does not match on your test panel it is usually one line in `PermissionMap.php` or `client.js` –

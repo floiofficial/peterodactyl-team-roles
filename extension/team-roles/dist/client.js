@@ -27,9 +27,6 @@ const EN = {
     'err.generic': 'Something went wrong.',
     'err.ownerOnly': 'Only the Owner may manage roles and rights.',
 
-    'tabs.users': 'Users',
-    'tabs.team': 'Team management',
-    'tabs.tickets': 'Support tickets',
 
     'team.title': 'Team management',
     'health.ok': 'Permission check is active ({groups}). Owners: {owners}.',
@@ -197,9 +194,6 @@ const DE = {
     'err.generic': 'Etwas ist schiefgelaufen.',
     'err.ownerOnly': 'Nur der Owner darf Rollen und Rechte verwalten.',
 
-    'tabs.users': 'Benutzer',
-    'tabs.team': 'Teamverwaltung',
-    'tabs.tickets': 'Support-Tickets',
 
     'team.title': 'Teamverwaltung',
     'health.ok': 'Rechteprüfung ist aktiv ({groups}). Owner: {owners}.',
@@ -537,18 +531,6 @@ function roleLabel(t, roles, slug) {
 const resLabel = (t, res) => { const k = 'res.' + res.key + '.label'; const v = t(k); return v === k ? res.label : v; };
 const resHint = (t, res) => { if (!res.hint) return ''; const k = 'res.' + res.key + '.hint'; const v = t(k); return v === k ? res.hint : v; };
 
-// Tab bar shown on the Users page, on the team management page and next to the support page.
-function UsersTabs({ active }) {
-    const { t } = useT();
-    const items = [
-        ['users', '/panel/users', t('tabs.users')],
-        ['team', '/panel/team', t('tabs.team')],
-        ['tickets', '/account/support', t('tabs.tickets')],
-    ];
-    return h('nav', { style: { ...S.row, gap: 8, marginBottom: 12 }, 'aria-label': t('tabs.team') },
-        items.map(([key, href, label]) => h('a', { key, href, style: S.tab(key === active), 'aria-current': key === active ? 'page' : undefined }, label)));
-}
-
 // ===================================================================== TEAM
 
 function PermissionMatrix({ catalog, selected, onToggle, onRow }) {
@@ -745,7 +727,7 @@ function TeamScreen() {
             h(Box, { title: t('members.title') }, h(Members, { roles, onChanged: load })));
     }
 
-    return h(Page, { title: t('team.title') }, h('div', { style: S.stack }, h(UsersTabs, { active: 'team' }), body, h(Footer)));
+    return h(Page, { title: t('team.title') }, h('div', { style: S.stack }, body, h(Footer)));
 }
 
 function pickId(props, resource) {
@@ -1054,8 +1036,10 @@ function SupportScreen() {
     const summary = useSummary();
     const initial = (() => {
         try {
-            const id = new URLSearchParams(window.location.search).get('ticket');
-            return id && /^\d+$/.test(id) ? { name: 'detail', id: Number(id) } : { name: 'list' };
+            const params = new URLSearchParams(window.location.search);
+            const id = params.get('ticket');
+            if (id && /^\d+$/.test(id)) return { name: 'detail', id: Number(id) };
+            return params.get('new') === '1' ? { name: 'new' } : { name: 'list' };
         } catch (e) { return { name: 'list' }; }
     })();
     const [view, setView] = useState(initial);
@@ -1084,15 +1068,17 @@ function SupportScreen() {
 
 // ================================================================== SLOTS
 
-function SupportBell() {
+// Always-visible entry in the top navigation: "Support" (with the unread counter) and "New ticket".
+function SupportNav() {
     const { t } = useT();
     const s = useSummary();
-    if (!s || !s.unread) return null;
-    return h('a', {
-        href: '/account/support',
-        title: s.unread_staff ? t('notif.staff', { n: s.unread_staff }) : t('notif.mine', { n: s.unread_mine }),
-        style: { ...S.chip, borderColor: '#2563eb', color: '#2563eb', margin: '0 8px', textDecoration: 'none', fontWeight: 600 },
-    }, t('notif.bell', { n: s.unread }));
+    const unread = s && s.unread ? s.unread : 0;
+    const title = unread ? (s.unread_staff ? t('notif.staff', { n: s.unread_staff }) : t('notif.mine', { n: s.unread_mine })) : t('sup.title');
+    const link = { color: 'inherit', textDecoration: 'none', fontWeight: 600, padding: '4px 6px' };
+    return h('span', { style: { display: 'inline-flex', gap: 6, alignItems: 'center', margin: '0 8px', flexWrap: 'wrap' } },
+        h('a', { href: '/account/support', title, style: unread ? { ...S.chip, borderColor: '#2563eb', color: '#2563eb', textDecoration: 'none', fontWeight: 600 } : link },
+            unread ? t('notif.bell', { n: unread }) : t('sup.title')),
+        h('a', { href: '/account/support?new=1', style: link }, '+ ' + t('sup.new')));
 }
 
 function SupportBanner() {
@@ -1120,18 +1106,14 @@ function RoleBadge({ data }) {
     return label ? h('span', { style: S.chip }, t('badge.role', { role: roleLabel(t, [], label) })) : null;
 }
 
-function UsersBar() {
-    return h(UsersTabs, { active: 'users' });
-}
-
 export default sdk.definePterodactylExtension({
     setup({ screens, slots }) {
         screens.register('team', () => Promise.resolve({ default: TeamScreen }));
         screens.register('user-role', () => Promise.resolve({ default: UserRoleScreen }));
         screens.register('support', () => Promise.resolve({ default: SupportScreen }));
+        screens.register('tickets', () => Promise.resolve({ default: SupportScreen }));
         slots.register('panel.users.detail.actions', RoleBadge);
-        slots.register('panel.users.before', UsersBar);
-        slots.register('nav.items.after', SupportBell);
+        slots.register('nav.items.after', SupportNav);
         slots.register('dashboard.before', SupportBanner);
         slots.register('panel.overview.before', SupportBanner);
     },

@@ -41,10 +41,11 @@ Mehr dazu weiter unten bei „Ein-Befehl-Installer“. Vorher bitte die Hinweise
 
 | Was | Wo |
 |---|---|
-| Rollen & Rechte, Mitglieder | **Admin → Users → Reiter „Team management“** (Reiterleiste über der Benutzerliste) – nur Owner |
+| Rollen & Rechte, Mitglieder | **Admin → „Team management“** (eigene Kategorie in der Admin-Seitenleiste, wie Users oder Locations) – nur Owner |
 | Rolle einer Person | **Admin → Users → [Benutzer] → Reiter „Role“** – nur Owner |
-| Support-Tickets (erstellen, lesen, antworten) | **Konto-Menü → Support** (`/account/support`) – jeder; auch über die Reiterleiste auf der Users-Seite |
-| Benachrichtigung | Blaue **„Support (n)“**-Markierung in der Navigation + Hinweisbalken auf Dashboard / Admin-Übersicht |
+| Alle Tickets (Team) | **Admin → „Support tickets“** (eigene Kategorie in der Admin-Seitenleiste) |
+| Support-Tickets (erstellen, lesen, antworten) | **„Support“ und „+ New ticket“ in der oberen Navigation** des Dashboards (jeder, auch Kunden) → `/account/support`; auch im Konto-Menü |
+| Benachrichtigung | Der **„Support (n)“**-Link in der oberen Navigation wird blau mit Zähler + Hinweisbalken auf Dashboard / Admin-Übersicht |
 
 ## Support-Tickets
 
@@ -64,7 +65,7 @@ Mehr dazu weiter unten bei „Ein-Befehl-Installer“. Vorher bitte die Hinweise
 | Tickets löschen | Ticket samt Nachrichten endgültig löschen |
 | Benachrichtigt werden | Panel-Benachrichtigung **und E-Mail** bei neuen Tickets und Antworten anderer (**nur zusammen mit „Alle Tickets sehen“**) |
 
-Einstellen unter **Admin → Users → Team management → Roles & rights → „Support tickets“** (Häkchen unten bei jeder
+Einstellen unter **Admin → Team management → Roles & rights → „Support tickets“** (Häkchen unten bei jeder
 Rolle). Standard: Administrator alle fünf; Moderator und Freund: sehen, antworten, benachrichtigt; Benutzer/Kunde: keine
 (eigene Tickets gehen immer).
 
@@ -96,7 +97,7 @@ zurück.**
 Konto im Panel hat (mehrere mit Komma). Stimmt die Adresse nicht, fragt er erneut. Danach wählst du, was die
 **übrigen bisherigen Admins** werden: Administrator (Standard), Moderator, Benutzer (kein Admin-Zugang mehr)
 oder Owner. **Leere Eingabe** = alle bisherigen Admins bleiben Owner (altes Verhalten, nichts ändert sich).
-Später änderst du Rollen jederzeit unter Users → Team management.
+Später änderst du Rollen jederzeit unter Admin → Team management.
 
 Ohne Rückfragen: `sudo bash install.sh /var/www/pterodactyl --owner ich@example.com --others administrator --yes`
 
@@ -309,7 +310,7 @@ ein Konsolen-Admin ohne Rolle wird automatisch Owner.
 * **Ticket-Regeln** (wer sehen/antworten/verwalten darf, Validierung, Status, „ungelesen“): 66 Prüfungen (`tests/ticket_rules_test.php`)
 * **Ticket-Datenbanklogik** gegen einen SQLite-Ersatz für den Laravel-Query-Builder: 39 Prüfungen (`tests/ticket_service_test.php`)
 * **Ticket-E-Mails** (Empfänger, Texte, Schutz vor Header-Injection, Mailfehler brechen nie Tickets): 28 Prüfungen (`tests/ticket_mail_test.php`) — mit Fake-Mailer, **es wurde keine echte E-Mail verschickt**
-* **Oberfläche** mit simuliertem React/SDK und Fake-Backend: 75 Prüfungen (`tests/ui/run.mjs`) — Kunde erstellt Ticket
+* **Oberfläche** mit simuliertem React/SDK und Fake-Backend: 78 Prüfungen (`tests/ui/run.mjs`) — Kunde erstellt Ticket
   mit Priorität, Team antwortet, Benachrichtigungen, Sprachwechsel EN/DE, Rechte-Editor, Manifest ↔ Screens/Slots
 * **Installer/Deinstaller** mit Fake-Panel: Reihenfolge (erst herabstufen, dann entfernen), Abbruch bei
   Fehler, automatisches Zurückrollen (genau einmal), Abbruch durch „n“

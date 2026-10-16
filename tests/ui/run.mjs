@@ -40,7 +40,9 @@ ok('no extra screens', Object.keys(screens).length === manifest.ui.screens.lengt
 const DOC_SLOTS = ['nav.items.before', 'nav.items.after', 'dashboard.before', 'dashboard.after', 'panel.overview.before', 'panel.overview.after', 'panel.users.before', 'panel.users.after', 'panel.users.detail.actions', 'account.overview.before', 'account.overview.after'];
 ok('only documented slots', Object.keys(slots).every(n => DOC_SLOTS.includes(n)));
 ok('support screen is an account screen', manifest.ui.screens.find(s => s.id === 'support').area === 'account');
-ok('team screen has no top-level nav (lives under Users)', !manifest.ui.screens.find(s => s.id === 'team').nav);
+const adminNav = manifest.ui.screens.filter(s => s.area === 'admin' && !s.parent && s.nav).map(s => s.id);
+ok('Team management and Support tickets are own admin categories', adminNav.includes('team') && adminNav.includes('tickets'));
+ok('support tickets admin category is registered', typeof screens.tickets === 'function');
 ok('manifest version 1.1.0', manifest.version === '1.1.0');
 ok('manifest all English', !/[äöüß]|Rollen|Freund|Kunde/.test(JSON.stringify(manifest)));
 
@@ -186,7 +188,8 @@ await mountScreen(Support);
 reset(); seed(); asCustomer();
 const slotRun = async (name, props) => { R.unmount(); await mountScreen(slots[name], props); return T(); };
 let bell = await slotRun('nav.items.after');
-ok('bell shows count for customer with new reply', bell.includes('Support (1)'));
+ok('top navigation: counter for customer with new reply', bell.includes('Support (1)'));
+ok('top navigation: links to support page and to the new-ticket form', find(R.tree(), e => e.tag === 'a').map(a => a.props.href).join() === '/account/support,/account/support?new=1');
 let banner = await slotRun('dashboard.before');
 ok('banner (customer): mine text + link', banner.includes('1 ticket(s) with a new reply') && find(R.tree(), e => e.tag === 'a' && e.props.href === '/account/support').length === 1);
 ok('overview banner also registered', typeof slots['panel.overview.before'] === 'function');
@@ -198,7 +201,7 @@ banner = await slotRun('dashboard.before');
 ok('staff WITHOUT notify: no banner for other people\'s tickets (only own unread)', !banner.includes('need attention'));
 reset(); seed(); asCustomer(); be.seen[11] = 2;
 bell = await slotRun('nav.items.after');
-ok('no unread => nothing rendered', bell === '');
+ok('no unread => plain Support link, still visible', bell.includes('Support') && !bell.includes('Support (') && bell.includes('+ New ticket'));
 // poller: toast on increase, timer only when visible
 reset(); seed(); asCustomer(); be.seen[11] = 2;
 await mountScreen(slots['nav.items.after']);
@@ -224,10 +227,7 @@ be.members = [{ id: 1, username: 'floi', email: 'f@x.de', role: 'owner' }, { id:
 reset();
 await mountScreen(Team);
 t = T();
-ok('team screen: tabs Users / Team management / Support tickets', t.includes('Users') && t.includes('Team management') && t.includes('Support tickets'));
-const hrefs = find(R.tree(), e => e.tag === 'a').map(a => a.props.href);
-ok('tab links', hrefs.includes('/panel/users') && hrefs.includes('/panel/team') && hrefs.includes('/account/support'));
-ok('active tab marked', find(R.tree(), e => e.tag === 'a' && e.props['aria-current'] === 'page').length === 1);
+ok('team screen has its own title, no tab bar', t.includes('Team management') && find(R.tree(), e => e.tag === 'nav').length === 0);
 ok('health OK text', t.includes('Permission check is active (admin-api). Owners: 1.'));
 ok('ticket rights block with 5 options', ['See all tickets', 'Reply to tickets', 'Change status & priority', 'Delete tickets', 'Get notified in the panel and by e-mail (new tickets & replies)'].every(s => t.includes(s)));
 ok('role tabs show Moderator (2), no Owner tab', t.includes('Moderator (2)') && t.includes('Friend (1)') && !t.includes('Owner (1)'));
@@ -275,8 +275,16 @@ ok('user role tab', T().includes('Role of mod') && T().includes('Current: Modera
 globalThis.__resource = null;
 reset(); await mountScreen(slots['panel.users.detail.actions'], { data: { resource: { id: 2 } } });
 ok('role badge', T().includes('Role: Moderator'));
-reset(); await mountScreen(slots['panel.users.before']);
-ok('users bar renders tab bar with active Users', find(R.tree(), e => e.tag === 'a' && e.props['aria-current'] === 'page').length === 1 && T().includes('Team management'));
+ok('no extra slot on the Users page any more', !('panel.users.before' in slots));
+// ?new=1 opens the new-ticket form directly (customer link in the top navigation)
+reset(); seed(); asCustomer(); window.location.search = '?new=1';
+await mountScreen(Support);
+ok('?new=1 opens the new-ticket form', T().includes('What is the problem?') && T().includes('Submit ticket'));
+window.location.search = '';
+// admin category renders the same support page
+reset(); seed(); asStaff({ manage: true });
+await mountScreen((await screens.tickets()).default);
+ok('admin Support tickets category shows the ticket page', T().includes('My tickets') && T().includes('All tickets'));
 
 console.log(fails === 0 ? 'OK' : 'FAILED', total + ' checks, ' + fails + ' failed');
 process.exit(fails ? 1 : 0);

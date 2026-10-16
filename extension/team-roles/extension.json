@@ -20,7 +20,22 @@
             {
                 "id": "team",
                 "area": "admin",
-                "path": "team"
+                "path": "team",
+                "nav": {
+                    "label": "Team management",
+                    "icon": "shield-check",
+                    "order": 5
+                }
+            },
+            {
+                "id": "tickets",
+                "area": "admin",
+                "path": "tickets",
+                "nav": {
+                    "label": "Support tickets",
+                    "icon": "life-buoy",
+                    "order": 6
+                }
             },
             {
                 "id": "user-role",
